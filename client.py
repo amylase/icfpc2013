@@ -24,10 +24,16 @@ def post_myproblems(update = False):
     with open('problems.json') as reader:
         return json.load(reader)
 
-def post_train():
+def post_train(size = 0, operators = None):
+    # operators is '' or 'tfold' or 'fold'
     try:
         url_train = url_base + 'train?auth=' + user_id
-        return json.load(urllib2.urlopen(url_train))
+        data = dict()
+        if 3 <= size <= 30:
+            data['size'] = size
+        if operators in ['', 'tfold', 'fold']:
+            data['operators'] = [operators]
+        return json.load(urllib2.urlopen(url_train, json.dumps(data)))
     except urllib2.HTTPError as err:
         return {u'status': u'error', u'message': err.__str__()}
     except:
