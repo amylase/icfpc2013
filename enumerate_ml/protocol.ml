@@ -17,8 +17,9 @@ let eval lst =
   in
   print_endline ("eval " ^ string_of_int n ^ " " ^ String.join " " (List.map to_string lst));
   flush stdout;
-  let _ :: xs = String.nsplit ~by:" " (read_line ())
+  let eval :: _ :: xs = String.nsplit ~by:" " (read_line ())
   in
+  assert(eval = "eval");
   List.map of_string xs
 
 let guess str =
