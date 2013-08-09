@@ -1,6 +1,6 @@
 .PHONY: all clean
 
-SOURCE = myStd.ml
+SOURCE = myBatteries.ml myStd.ml
 
 OCAML_DIR = $(shell ocamlc -where)
 CAMLP4 = "camlp4o pa_comprehension.cma"
