@@ -81,7 +81,7 @@ let rec optimize_expr = function
     let e' = optimize_expr e in
     begin match op, e' with
     | Not, Op1 (Not, e'') -> e''
-    | _ -> e'
+    | _ -> Op1 (op, e')
     end
   | Op2 (op, e1, e2) ->
     let e1' = optimize_expr e1 in
@@ -92,7 +92,21 @@ let rec optimize_expr = function
       else
         e2', e1'
     in
-    Op2 (op, e1'', e2'')
+    match op, e1'', e2'' with
+    | And, Zero, _ -> Zero
+    | And, _, Zero -> Zero
+    | And, One, One -> One
+    | Or, Zero, Zero -> Zero
+    | Or, Zero, One  -> One
+    | Or, One, Zero  -> One
+    | Or, One, One   -> One
+    | Xor, Zero, Zero -> Zero
+    | Xor, Zero, One  -> One
+    | Xor, One, Zero  -> One
+    | Xor, One, One   -> Zero
+    | Plus, Zero, e2'' -> e2''
+    | Plus, e1'', Zero -> e1''
+    | _ -> Op2 (op, e1'', e2'')
 
 let optimize_program (Lambda e) = Lambda (optimize_expr e)
 
@@ -142,7 +156,8 @@ let enumerate_program n =
 let solve n =
   let ans = enumerate_program n
   in
-  (*Set.iter (print_endline % program_to_string) ans';*)
+  if Array.mem "-v" Sys.argv then
+    Set.iter (print_endline % program_to_string) ans;
   print_endline (string_of_int (Set.cardinal ans))
 
 let () =
