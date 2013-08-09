@@ -3,6 +3,7 @@
 import client
 import subprocess
 import time
+import signal
 
 wait_time = 5
 
@@ -24,6 +25,7 @@ def parse_query(query_line):
         query['program'] = query_line[6:].strip()
     else:
         # skip query
+        pass
     return query
 
 def eval_result_string(eval_result):
@@ -48,7 +50,17 @@ def solve(problem, solver_command):
 
     # execute commands from worker
     while True:
-        raw_query = worker.stdout.readline()
+        # wait at most 60 seconds
+        try:
+            def handler(signum, frame): raise Exception('Enumeration failed.')
+            signal.alarm(60, handler)
+            raw_query = worker.stdout.readline()
+            signal.alarm(0)
+        except:
+            print 'Enumeration takes more than 60 secs. Skipped.'
+            signal.alarm(0)
+            break
+        
         query = parse_query(raw_query)
         if query['type'] == 'eval':
             while True:
@@ -118,7 +130,7 @@ if __name__ == '__main__':
 
     for i in xrange(20):
         while True:
-            train = client.post_train(size = 5)
+            train = client.post_train(size = 12)
             if train.has_key('status'):
                 print train
             else:
