@@ -5,7 +5,7 @@ type problem = Problem of int * string list
 
 type eval = Eval of int list
 
-type guess = Win | Mismatch of int * int * int
+type guess = Win | Mismatch of uint64 * uint64 * uint64
 
 let get_problem () =
   let n :: _ :: ops = String.nsplit ~by:" " (read_line ())
@@ -17,7 +17,9 @@ let eval lst =
   in
   print_endline ("eval " ^ string_of_int n ^ " " ^ String.join " " (List.map to_string lst));
   flush stdout;
-  let eval :: _ :: xs = String.nsplit ~by:" " (read_line ())
+  let line = read_line () in
+  let () = prerr_endline ("evalA: " ^ line) in
+  let eval :: _ :: xs = String.nsplit ~by:" " line
   in
   assert(eval = "eval");
   List.map of_string xs
@@ -27,11 +29,12 @@ let guess str =
   flush stdout;
   let str = read_line ()
   in
+  let () = prerr_endline ("guessA: " ^ str) in
   if str = "win" then
     Win
   else
     let mismatch :: input :: expected :: your :: _ = String.nsplit ~by:" " str
     in
     assert (mismatch = "mismatch");
-    Mismatch (int_of_string input, int_of_string expected, int_of_string your)
+    Mismatch (of_string input, of_string expected, of_string your)
 

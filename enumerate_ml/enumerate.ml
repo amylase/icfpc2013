@@ -223,8 +223,9 @@ let enumerate_program n =
   Set.map (fun e -> Lambda e) (enumerate_expr true false (n-1))
 
 let rec f i candidates =
-  if Set.cardinal candidates = 1 then
-    Set.choose candidates
+  prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (Set.cardinal candidates)));
+  if Set.cardinal candidates < 5 || i >= 10 then
+    candidates
   else
     let evalQ = (List.init 256 (fun j -> of_int (256 * i + j))) in
     let evalA = eval evalQ in
@@ -239,7 +240,12 @@ let () =
   if Array.mem "-v" Sys.argv then
     Set.iter (print_endline % program_to_string) candidates;
   prerr_endline (string_of_int (Set.cardinal candidates));
-  assert (guess (program_to_string (f 0 candidates)) = Win)
+  Set.iter
+    (fun candidate ->
+      match guess (program_to_string candidate) with
+      | Win -> exit 0
+      | _ -> ())
+    (f 0 candidates)
 
 (*
 let () =
