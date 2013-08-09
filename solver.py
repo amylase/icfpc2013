@@ -71,8 +71,9 @@ def solve(problem, solver_command):
 if __name__ == '__main__':
     print 'solver: start.'
     
-    train = client.post_train(size = 3)
-    solve(train, './test_worker.py')
+    train = client.post_train(size = 9)
+    time.sleep(4)
+    solve(train, './enumerate_ml/enumerate')
     
 
 

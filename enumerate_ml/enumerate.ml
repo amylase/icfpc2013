@@ -20,7 +20,7 @@ let rec uint_fold' f init vec n =
   if n = 0 then
     init
   else
-    uint_fold' f (f (logand vec (of_int 0xff)) init) (shift_right vec 1) (n-1)
+    uint_fold' f (f (logand vec (of_int 0xff)) init) (shift_right vec 8) (n-1)
 
 let uint_fold f init vec =
   uint_fold' f init vec 8
@@ -81,7 +81,7 @@ let rec expr_to_string = function
   | One    -> "1"
   | Var id -> id
   | If0 (e1, e2, e3) -> "(if0 " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ " " ^ expr_to_string e3 ^ ")"
-  | Fold (e1, e2, e3) -> "fold " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ " (lambda (y, z) " ^ expr_to_string e3 ^ ")"
+  | Fold (e1, e2, e3) -> "(fold " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ " (lambda (y z) " ^ expr_to_string e3 ^ "))"
   | Op1 (op, e) -> "(" ^ op1_to_string op ^ " " ^ expr_to_string e ^ ")"
   | Op2 (op, e1, e2) -> "(" ^ op2_to_string op ^ " " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ ")"
 
@@ -107,7 +107,7 @@ let rec can_optimize_expr = function
   | One -> false
   | Var id -> false
   | If0 (e1, e2, e3) ->
-    can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3 || e2 = e3
+    can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3 || e1 = Zero || e1 = One || e2 = e3
   | Fold (e1, e2, e3) ->
     can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3
   | Op1 (op, e) ->
@@ -224,28 +224,24 @@ let enumerate_program n =
 
 let rec f i candidates =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (Set.cardinal candidates)));
-  if Set.cardinal candidates < 5 || i >= 10 then
-    candidates
+  if Set.cardinal candidates < 100 || true then
+    match guess (program_to_string (Set.choose candidates)) with
+    | Win -> ()
+    | Mismatch (input, expected, _) ->
+      f (i+1) (Set.filter (fun p -> eval_program input p = expected) candidates)
   else
-    let evalQ = (List.init 256 (fun j -> of_int (256 * i + j))) in
+    let evalQ = List.init 256 (fun _ -> of_int (Random.int 0xfffffff)) in
     let evalA = eval evalQ in
     f (i+1) (List.fold_left (fun set (q, a) -> Set.filter (fun p -> eval_program q p = a) set) candidates (List.combine evalQ evalA))
 
 let () =
   let Problem (n, ops) = get_problem () in
-  let enumerate = if Array.mem "-tfold" Sys.argv then enumerate_tfold_program else enumerate_program
-  in
-  let candidates = [? Set : p | i <- (2--n); p <- Set.enum (enumerate i) ?]
+  let candidates = [? Set : p | i <- (2--n); p <- Set.enum (enumerate_program i) ?]
   in
   if Array.mem "-v" Sys.argv then
     Set.iter (print_endline % program_to_string) candidates;
   prerr_endline (string_of_int (Set.cardinal candidates));
-  Set.iter
-    (fun candidate ->
-      match guess (program_to_string candidate) with
-      | Win -> exit 0
-      | _ -> ())
-    (f 0 candidates)
+  f 0 candidates
 
 (*
 let () =
