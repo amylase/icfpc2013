@@ -102,12 +102,18 @@ let split3 n =
                    (y, z) <- split2 (n-x)
     ?]
 
+let same_prefix e1 e2 =
+  match e1, e2 with
+  | Op1 (op1, e1'), Op1(op2, e2') -> op1 = op2
+  | Op2 (op1, e1', _), Op2(op2, e2', _) -> op1 = op2 && e1' = e2'
+  | _, _ -> false
+
 let rec can_optimize_expr = function
   | Zero -> false
   | One -> false
   | Var id -> false
   | If0 (e1, e2, e3) ->
-    can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3 || e1 = Zero || e1 = One || e2 = e3
+    can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3 || e1 = Zero || e1 = One || e2 = e3 || same_prefix e2 e3
   | Fold (e1, e2, e3) ->
     can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3
   | Op1 (op, e) ->
@@ -252,7 +258,7 @@ let string_to_op2 = function
 let rec string_to_type = function
   | hd :: tl ->
     let op1s, op2s = string_to_type tl in
-    if List.mem hd ["not"; "shl1"; "shr1"; "shr4"; "shr16"] then (string_to_op1 hd) :: op1s, op2s else 
+    if List.mem hd ["not"; "shl1"; "shr1"; "shr4"; "shr16"] then (string_to_op1 hd) :: op1s, op2s else
       if List.mem hd ["and"; "or"; "xor"; "plus"] then op1s, (string_to_op2 hd) :: op2s else op1s, op2s
   | [] -> [], []
 
