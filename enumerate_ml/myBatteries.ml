@@ -8,6 +8,10 @@ module Array = struct
   include BatArray
 end
 
+module String = struct
+  include BatString
+end
+
 module Set = BatSet
 module Map = BatMap
 module Enum = BatEnum
@@ -17,3 +21,6 @@ let flip f x y =
 
 let (%) f g x =
   f (g x)
+
+let (--) =
+  Enum.(--)
