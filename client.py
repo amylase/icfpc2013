@@ -12,32 +12,62 @@ def post_myproblems(update = False):
         url_problem = url_base + 'myproblems?auth=' + user_id
         print url_problem
         with open('problems.json', 'w') as writer:
-            writer.write(urllib2.urlopen(url_problem).read())
+            try: 
+                writer.write(urllib2.urlopen(url_problem).read())
+            except urllib2.HTTPError as err:
+                return {u'status': u'error', u'message': err.__str__()}
+            except:
+                print 'unknown error on post_myproblems'
+                raise
     else:
         print 'problems.json exists.'
     with open('problems.json') as reader:
         return json.load(reader)
 
 def post_train():
-    url_train = url_base + 'train?auth=' + user_id
-    return json.load(urllib2.urlopen(url_train))
+    try:
+        url_train = url_base + 'train?auth=' + user_id
+        return json.load(urllib2.urlopen(url_train))
+    except urllib2.HTTPError as err:
+        return {u'status': u'error', u'message': err.__str__()}
+    except:
+        print 'unknown error on post_train'
+        raise
 
 def post_eval(problem, args):
-    url_eval = url_base + 'eval?auth=' + user_id
-    argstrs = map(lambda x: ('0x%016x' % x).upper(), args)
-    data = json.dumps({'id': problem['id'], 'arguments': argstrs})
-    return json.load(urllib2.urlopen(url_eval, data))
+    try:
+        url_eval = url_base + 'eval?auth=' + user_id
+        argstrs = map(lambda x: ('0x%016x' % x).upper(), args)
+        data = json.dumps({'id': problem['id'], 'arguments': argstrs})
+        return json.load(urllib2.urlopen(url_eval, data))
+    except urllib2.HTTPError as err:
+        return {u'status': u'error', u'message': err.__str__()}
+    except:
+        print 'unknown error on post_eval'
+        raise
 
 def post_eval_program(program, args):
-    url_eval = url_base + 'eval?auth=' + user_id
-    argstrs = map(lambda x: ('0x%016x' % x).upper(), args)
-    data = json.dumps({'program': program, 'arguments': argstrs})
-    return json.load(urllib2.urlopen(url_eval, data))
-
+    try:
+        url_eval = url_base + 'eval?auth=' + user_id
+        argstrs = map(lambda x: ('0x%016x' % x).upper(), args)
+        data = json.dumps({'program': program, 'arguments': argstrs})
+        return json.load(urllib2.urlopen(url_eval, data))
+    except urllib2.HTTPError as err:
+        return {u'status': u'error', u'message': err.__str__()}
+    except:
+        print 'unknown error on post_eval_program'
+        raise
+    
 def post_guess(problem, program):
-    url_guess = url_base + 'guess?auth=' + user_id
-    data = json.dumps({'id': problem['id'], 'program': program})
-    return json.load(urllib2.urlopen(url_guess, data))
+    try:
+        url_guess = url_base + 'guess?auth=' + user_id
+        data = json.dumps({'id': problem['id'], 'program': program})
+        return json.load(urllib2.urlopen(url_guess, data))
+    except urllib2.HTTPError as err:
+        return {u'status': u'error', u'message': err.__str__()}
+    except:
+        print 'unknown error on post_guess'
+        raise
 
 # print 'size:', train_problem['size']
 # print post_eval(train_problem, xrange(0, 32))
