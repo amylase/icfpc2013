@@ -9,7 +9,7 @@ type expr =
 | One
 | Var of id
 | If0 of expr * expr * expr
-| Fold of expr * expr * id * id * expr
+| Fold of expr * expr * expr
 | Op1 of op1 * expr
 | Op2 of op2 * expr * expr
 type program = Lambda of expr
@@ -32,18 +32,12 @@ let rec expr_to_string = function
   | One    -> "1"
   | Var id -> id
   | If0 (e1, e2, e3) -> "(if0 " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ " " ^ expr_to_string e3 ^ ")"
-  | Fold (e1, e2, id1, id2, e3) -> "fold " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ " (lambda (" ^ id1 ^ ", " ^ id2 ^ ") " ^ expr_to_string e3 ^ ")"
+  | Fold (e1, e2, e3) -> "fold " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ " (lambda (y, z) " ^ expr_to_string e3 ^ ")"
   | Op1 (op, e) -> "(" ^ op1_to_string op ^ " " ^ expr_to_string e ^ ")"
   | Op2 (op, e1, e2) -> "(" ^ op2_to_string op ^ " " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ ")"
 
 let program_to_string (Lambda e) =
   "(lambda (x) " ^ expr_to_string e ^ ")"
-
-let _cnt = ref 0
-
-let new_id () =
-  incr _cnt;
-  "x_" ^ (string_of_int (!_cnt))
 
 let split2 n =
   if n < 2 then
@@ -59,99 +53,82 @@ let split3 n =
                    (y, z) <- split2 (n-x)
     ?]
 
-let rec optimize_expr = function
-  | Zero -> Zero
-  | One -> One
-  | Var id -> Var id
+let rec can_optimize_expr = function
+  | Zero -> false
+  | One -> false
+  | Var id -> false
   | If0 (e1, e2, e3) ->
-    let e1' = optimize_expr e1 in
-    let e2' = optimize_expr e2 in
-    let e3' = optimize_expr e3 in
-    begin match optimize_expr e1' with
-    | Zero -> e2
-    | One  -> e3
-    | _ -> if e2' = e3' then e2' else If0 (e1', e2', e3')
-    end
-  | Fold (e1, e2, id1, id2, e3) ->
-    let e1' = optimize_expr e1 in
-    let e2' = optimize_expr e2 in
-    let e3' = optimize_expr e3 in
-    Fold (e1', e2', id1, id2, e3')
+    can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3 || e2 = e3
+  | Fold (e1, e2, e3) ->
+    can_optimize_expr e1 || can_optimize_expr e2 || can_optimize_expr e3
   | Op1 (op, e) ->
-    let e' = optimize_expr e in
-    begin match op, e' with
-    | Not, Op1 (Not, e'') -> e''
-    | _ -> Op1 (op, e')
-    end
+    can_optimize_expr e ||
+      begin match op, e with
+      | Not, Op1 (Not, _) -> true
+      | _ -> false
+      end
   | Op2 (op, e1, e2) ->
-    let e1' = optimize_expr e1 in
-    let e2' = optimize_expr e2 in
-    let e1'', e2'' =
-      if e1' < e2' then
-        e1', e2'
-      else
-        e2', e1'
-    in
-    match op, e1'', e2'' with
-    | And, Zero, _ -> Zero
-    | And, _, Zero -> Zero
-    | And, One, One -> One
-    | Or, Zero, Zero -> Zero
-    | Or, Zero, One  -> One
-    | Or, One, Zero  -> One
-    | Or, One, One   -> One
-    | Xor, Zero, Zero -> Zero
-    | Xor, Zero, One  -> One
-    | Xor, One, Zero  -> One
-    | Xor, One, One   -> Zero
-    | Plus, Zero, e2'' -> e2''
-    | Plus, e1'', Zero -> e1''
-    | _ -> Op2 (op, e1'', e2'')
-
-let optimize_program (Lambda e) = Lambda (optimize_expr e)
+    can_optimize_expr e1 || can_optimize_expr e2 || e1 > e2 ||
+      begin match op, e1, e2 with
+      | And, Zero, _
+      | And, _, Zero
+      | And, One, One
+      | Or, Zero, _
+      | Or, _, Zero
+      | Or, One, One
+      | Xor, Zero, _
+      | Xor, _, Zero
+      | Xor, One, One
+      | Plus, Zero, _
+      | Plus, _, Zero -> true
+      | _ -> false
+      end
 
 let memo = Hashtbl.create 0
 
-let rec enumerate_expr ids n =
-  if Hashtbl.mem memo (ids, n) then
-    Hashtbl.find memo (ids, n)
+let rec enumerate_expr fold n =
+  if Hashtbl.mem memo (fold, n) then
+    Hashtbl.find memo (fold, n)
   else
-    let ans = Set.map optimize_expr begin match n with
+    let ans = Set.filter (not % can_optimize_expr) begin match n with
       | 0 -> invalid_arg "zero is not allowed"
-      | 1 -> Set.of_list (List.rev_append [Zero; One] (List.map (fun id -> Var id) ids))
+      | 1 ->
+        Set.of_list
+          (if fold then [Zero; One; Var "x"] else [Zero; One; Var "x"; Var "y"; Var "z"])
       | n ->
-        let id1 = new_id () in
-        let id2 = new_id () in
         Set.unions [
           [? Set : Op1 (op, e) |
            op <- List.enum [Not; Shl1; Shr1; Shr4; Shr16];
-           e <- Set.enum (enumerate_expr ids (n-1))
+           e <- Set.enum (enumerate_expr fold (n-1))
           ?];
           [? Set : Op2 (op, e1, e2) |
            op <- List.enum [And; Or; Xor; Plus];
            (x, y) <- split2 (n-1);
-           e1 <- Set.enum (enumerate_expr ids x);
-           e2 <- Set.enum (enumerate_expr ids y)
+           e1 <- Set.enum (enumerate_expr fold x);
+           e2 <- Set.enum (enumerate_expr fold y)
           ?];
           [? Set : If0 (e1, e2, e3) |
            (x, y, z) <- split3 (n-1);
-           e1 <- Set.enum (enumerate_expr ids x);
-           e2 <- Set.enum (enumerate_expr ids y);
-           e3 <- Set.enum (enumerate_expr ids z)
+           e1 <- Set.enum (enumerate_expr fold x);
+           e2 <- Set.enum (enumerate_expr fold y);
+           e3 <- Set.enum (enumerate_expr fold z)
           ?];
-          [? Set : Fold (e1, e2, id1, id2, e3) |
-           (x, y, z) <- split3 (n-2);
-           e1 <- Set.enum (enumerate_expr ids x);
-           e2 <- Set.enum (enumerate_expr ids y);
-           e3 <- Set.enum (enumerate_expr (id1 :: id2 :: ids) z)
-          ?];
+          if fold then
+            [? Set : Fold (e1, e2, e3) |
+               (x, y, z) <- split3 (n-2);
+               e1 <- Set.enum (enumerate_expr fold x);
+               e2 <- Set.enum (enumerate_expr fold y);
+               e3 <- Set.enum (enumerate_expr false z)
+            ?]
+          else
+            Set.empty
         ]
     end
     in
-    Hashtbl.add memo (ids, n) ans; ans
+    Hashtbl.add memo (fold, n) ans; ans
 
 let enumerate_program n =
-  Set.map (fun e -> Lambda e) (enumerate_expr ["x"] (n-1))
+  Set.map (fun e -> Lambda e) (enumerate_expr true (n-1))
 
 let solve n =
   let ans = enumerate_program n
