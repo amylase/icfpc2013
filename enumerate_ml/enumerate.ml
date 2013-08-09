@@ -1,6 +1,7 @@
 open MyBatteries
 open MyStd
 open Protocol
+open Uint64
 
 type id = string
 type op1 = Not | Shl1 | Shr1 | Shr4 | Shr16
@@ -14,6 +15,53 @@ type expr =
 | Op1 of op1 * expr
 | Op2 of op2 * expr * expr
 type program = Lambda of expr
+
+let rec uint_fold' f init vec n =
+  if n = 0 then
+    init
+  else
+    uint_fold' f (f (logand vec (of_int 0xff)) init) (shift_right vec 1) (n-1)
+
+let uint_fold f init vec =
+  uint_fold' f init vec 8
+
+let rec eval_expr x y z = function
+  | Zero -> zero
+  | One  -> one
+  | Var id ->
+    begin match id with
+    | "x" -> x
+    | "y" -> y
+    | "z" -> z
+    | _ -> assert false
+    end
+  | If0 (e1, e2, e3) ->
+    if eval_expr x y z e1 = zero then
+      eval_expr x y z e2
+    else
+      eval_expr x y z e3
+  | Fold (e1, e2, e3) ->
+    uint_fold (fun y z -> eval_expr x y z e3) (eval_expr x y z e2) (eval_expr x y z e1)
+  | Op1 (op, e1) ->
+    let v = (eval_expr x y z e1) in
+    begin match op with
+    | Not -> lognot v
+    | Shl1 -> shift_left v 1
+    | Shr1 -> shift_right v 1
+    | Shr4 -> shift_right v 4
+    | Shr16 -> shift_right v 16
+    end
+  | Op2 (op, e1, e2) ->
+    let v1 = eval_expr x y z e1 in
+    let v2 = eval_expr x y z e2 in
+    begin match op with
+    | And -> logand v1 v2
+    | Or  -> logor  v1 v2
+    | Xor -> logxor v1 v2
+    | Plus -> add v1 v2
+    end
+
+let eval_program x (Lambda e) = eval_expr x zero zero e
 
 let op1_to_string = function
   | Not -> "not"
@@ -174,14 +222,27 @@ let enumerate_tfold_program n =
 let enumerate_program n =
   Set.map (fun e -> Lambda e) (enumerate_expr true false (n-1))
 
-let solve n =
-  let enumerate = if Array.mem "-tfold" Sys.argv then enumerate_tfold_program else enumerate_program
-  in
-  let ans = [? Set : p | i <- (2--n); p <- Set.enum (enumerate i) ?]
-  in
-  if Array.mem "-v" Sys.argv then
-    Set.iter (print_endline % program_to_string) ans;
-  print_endline (string_of_int (Set.cardinal ans))
+let rec f i candidates =
+  if Set.cardinal candidates = 1 then
+    Set.choose candidates
+  else
+    let evalQ = (List.init 256 (fun j -> of_int (256 * i + j))) in
+    let evalA = eval evalQ in
+    f (i+1) (List.fold_left (fun set (q, a) -> Set.filter (fun p -> eval_program q p = a) set) candidates (List.combine evalQ evalA))
 
 let () =
-  Scanf.scanf "%d" solve
+  let Problem (n, ops) = get_problem () in
+  let enumerate = if Array.mem "-tfold" Sys.argv then enumerate_tfold_program else enumerate_program
+  in
+  let candidates = [? Set : p | i <- (2--n); p <- Set.enum (enumerate i) ?]
+  in
+  if Array.mem "-v" Sys.argv then
+    Set.iter (print_endline % program_to_string) candidates;
+  prerr_endline (string_of_int (Set.cardinal candidates));
+  assert (guess (program_to_string (f 0 candidates)) = Win)
+
+(*
+let () =
+  print_endline (to_string_hex (eval_expr (of_int 0x1122334455667788) zero zero (Fold ((Var "x"), Zero, (Op2 (Or, (Var "y"), (Var "z")))))));
+  flush stdout;
+  Scanf.scanf "%d" solve*)

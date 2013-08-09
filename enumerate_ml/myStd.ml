@@ -13,6 +13,10 @@ let third3  f (x, y, z) = (  x,   y, f z)
 
 let ( ~~ ) x = flip x
 
+let rec repeat n f x =
+  if n = 0 then x
+  else f (repeat (n-1) f x)
+
 let rec power = function
   | [] -> [[]]
   | x :: xs ->

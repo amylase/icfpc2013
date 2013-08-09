@@ -1,4 +1,5 @@
 open MyBatteries
+open Uint64
 
 type problem = Problem of int * string list
 
@@ -14,11 +15,11 @@ let get_problem () =
 let eval lst =
   let n = List.length lst
   in
-  print_endline ("eval " ^ string_of_int n ^ " " ^ String.join " " (List.map string_of_int lst));
+  print_endline ("eval " ^ string_of_int n ^ " " ^ String.join " " (List.map to_string lst));
   flush stdout;
   let _ :: xs = String.nsplit ~by:" " (read_line ())
   in
-  xs
+  List.map of_string xs
 
 let guess str =
   print_endline ("guess " ^ str);
