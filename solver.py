@@ -66,17 +66,25 @@ def solve(problem, solver_command):
             if result['status'] == 'win':
                 print 'solver: We have solved the problem id', problem['id'], '!!'
                 break
-        time.sleep(4)
+        time.sleep(5)
+
+def solve_honban(condition, command):
+    problems = client.post_myproblems(update = True)
+    for problem in problems:
+        if condition(problem):
+            print problem
+            solve(train, command)
 
 if __name__ == '__main__':
     import sys
-    command =  './test_worker.py'
-    if len(sys.argv) == 2:
-        command = sys.argv[1]
+    command = sys.argv[1] if len(sys.argv) == 2 else './test_worker.py'
 
     print 'solver: start.'
-    
-    train = client.post_train(size = 6)
-    solve(train, command)
+    def cond(prob):
+        return prob['size'] <= 12:
+    solve_honban(cond, command)
+
+    # train = client.post_train(size = 13)
+    # solve(train, command)
 
 
