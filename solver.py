@@ -52,6 +52,7 @@ def solve(problem, solver_command):
             if result['status'] == 'error':
                 print 'solver: error occured in eval query.'
                 print result['message']
+                time.sleep(5)
                 break
             worker.stdin.write(eval_result_string(result) + '\n')
             worker.stdin.flush()
@@ -60,20 +61,29 @@ def solve(problem, solver_command):
             if result['status'] == 'error':
                 print 'solver: error occured in guess query.'
                 print result['message']
+                time.sleep(5)
                 break
             worker.stdin.write(guess_result_string(result) + '\n')
             worker.stdin.flush()
             if result['status'] == 'win':
                 print 'solver: We have solved the problem id', problem['id'], '!!'
+                time.sleep(5)
                 break
         time.sleep(5)
 
 def solve_honban(condition, command):
     problems = client.post_myproblems(update = True)
     for problem in problems:
-        if condition(problem):
+        if condition(problem) and not problem.get('solved', False) and problem.get('timeLeft', 300.) > 0.:
             print problem
-            solve(train, command)
+            solve(problem, command)
+
+def solve_honban_id(ids, command):
+    problems = client.post_myproblems(update = False)
+    for problem in problems:
+        if problem['id'] == ids and not problem.get('solved', False) and problem.get('timeLeft', 300.) > 0.:
+            print problem
+            solve(command)
 
 if __name__ == '__main__':
     import sys
@@ -81,7 +91,7 @@ if __name__ == '__main__':
 
     print 'solver: start.'
     def cond(prob):
-        return prob['size'] <= 12:
+        return prob['size'] <= 5
     solve_honban(cond, command)
 
     # train = client.post_train(size = 13)
