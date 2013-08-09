@@ -53,7 +53,8 @@ def solve(problem, solver_command):
         # wait at most 60 seconds
         try:
             def handler(signum, frame): raise Exception('Enumeration failed.')
-            signal.alarm(60, handler)
+            signal.signal(signal.SIGALRM, handler)
+            signal.alarm(60)
             raw_query = worker.stdout.readline()
             signal.alarm(0)
         except:
@@ -121,13 +122,13 @@ if __name__ == '__main__':
     command = sys.argv[1] if len(sys.argv) == 2 else './enumerate_ml/enumerate'
 
     print 'solver: start.'
-
+    """
     def cond(prob):
-        return prob['size'] <= 9
+        return prob['size'] <= 10
     solve_honban(cond, command)
     
     quit()
-
+    """
     for i in xrange(20):
         while True:
             train = client.post_train(size = 12)
