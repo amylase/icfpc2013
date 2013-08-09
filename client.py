@@ -24,13 +24,13 @@ def post_train():
 
 def post_eval(problem, args):
     url_eval = url_base + 'eval?auth=' + user_id
-    argstrs = map(str, args)
+    argstrs = map(lambda x: ('0x%016x' % x).upper(), args)
     data = json.dumps({'id': problem['id'], 'arguments': argstrs})
     return json.load(urllib2.urlopen(url_eval, data))
 
 def post_eval_program(program, args):
     url_eval = url_base + 'eval?auth=' + user_id
-    argstrs = map(str, args)
+    argstrs = map(lambda x: ('0x%016x' % x).upper(), args)
     data = json.dumps({'program': program, 'arguments': argstrs})
     return json.load(urllib2.urlopen(url_eval, data))
 
