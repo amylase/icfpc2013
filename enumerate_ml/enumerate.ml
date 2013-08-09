@@ -15,6 +15,10 @@ type expr =
 | Op2 of op2 * expr * expr
 type program = Lambda of expr
 
+let eval_expr = function
+  | Zero -> 0
+  | One  -> 1
+
 let op1_to_string = function
   | Not -> "not"
   | Shl1 -> "shl1"
@@ -117,8 +121,8 @@ let rec enumerate_expr fold n =
           if fold then
             [? Set : Fold (e1, e2, e3) |
                (x, y, z) <- split3 (n-2);
-               e1 <- Set.enum (enumerate_expr fold x);
-               e2 <- Set.enum (enumerate_expr fold y);
+               e1 <- Set.enum (enumerate_expr false x);
+               e2 <- Set.enum (enumerate_expr false y);
                e3 <- Set.enum (enumerate_expr false z)
             ?]
           else
