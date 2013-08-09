@@ -1,4 +1,8 @@
-module List = BatList
+module List = struct
+  include List
+  include BatList
+end
+
 module Set = BatSet
 module Map = BatMap
 module Enum = BatEnum
