@@ -25,12 +25,19 @@ public:
     SyntaxTree* child[3];
 
     SyntaxTree();
-    SyntaxTree(Operation, int varNum = 0, SyntaxTree** childs = NULL);
+    SyntaxTree(Operation, int varNum = 0, SyntaxTree* child1 = NULL, SyntaxTree* child2 = NULL,SyntaxTree* child3 = NULL);
     SyntaxTree(const SyntaxTree&);
     ~SyntaxTree();
-    SyntaxTree& operator=(const SyntaxTree&);
     std::string toString();
     std::string opName();
     std::string varName(int v);
-    
+    unsigned long long eval(unsigned long long x);
+    unsigned long long evalSub();
+
+    SyntaxTree& operator=(const SyntaxTree&);
+    bool operator<(const SyntaxTree&);
+    bool operator<=(const SyntaxTree&);
+    bool operator>(const SyntaxTree&);
+    bool operator>=(const SyntaxTree&);
+    bool operator==(const SyntaxTree&);
 };
