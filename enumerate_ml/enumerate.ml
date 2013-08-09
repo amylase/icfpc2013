@@ -135,9 +135,9 @@ let rec can_optimize_expr = function
 
 let memo = Hashtbl.create 0
 
-let rec enumerate_expr fold bound n =
-  if Hashtbl.mem memo (fold, bound, n) then
-    Hashtbl.find memo (fold, bound, n)
+let rec enumerate_expr fold bound op1s op2s n =
+  if Hashtbl.mem memo (fold, bound, op1s, op2s, n) then
+    Hashtbl.find memo (fold, bound, op1s, op2s, n)
   else
     let ans = Set.filter (not % can_optimize_expr) begin match n with
       | 0 -> invalid_arg "zero is not allowed"
@@ -148,79 +148,79 @@ let rec enumerate_expr fold bound n =
         if fold then
           Set.unions [
             [? Set : Op1 (op, e) |
-                op <- List.enum [Not; Shl1; Shr1; Shr4; Shr16];
-                e <- Set.enum (enumerate_expr fold bound (n-1))
+                op <- List.enum op1s;
+                e <- Set.enum (enumerate_expr fold bound op1s op2s (n-1))
             ?];
             [? Set : Op2 (op, e1, e2) |
-                op <- List.enum [And; Or; Xor; Plus];
+                op <- List.enum op2s;
                 (x, y) <- split2 (n-1);
-                e1 <- Set.enum (enumerate_expr fold bound x);
-                e2 <- Set.enum (enumerate_expr false bound y)
+                e1 <- Set.enum (enumerate_expr fold bound op1s op2s x);
+                e2 <- Set.enum (enumerate_expr false bound op1s op2s y)
             ?];
             [? Set : Op2 (op, e1, e2) |
-                op <- List.enum [And; Or; Xor; Plus];
+                op <- List.enum op2s;
                 (x, y) <- split2 (n-1);
-                e1 <- Set.enum (enumerate_expr false bound x);
-                e2 <- Set.enum (enumerate_expr fold bound y)
+                e1 <- Set.enum (enumerate_expr false bound op1s op2s x);
+                e2 <- Set.enum (enumerate_expr fold bound op1s op2s y)
             ?];
             [? Set : If0 (e1, e2, e3) |
                 (x, y, z) <- split3 (n-1);
-                e1 <- Set.enum (enumerate_expr fold bound x);
-                e2 <- Set.enum (enumerate_expr false bound y);
-                e3 <- Set.enum (enumerate_expr false bound z)
+                e1 <- Set.enum (enumerate_expr fold bound op1s op2s x);
+                e2 <- Set.enum (enumerate_expr false bound op1s op2s y);
+                e3 <- Set.enum (enumerate_expr false bound op1s op2s z)
             ?];
             [? Set : If0 (e1, e2, e3) |
                 (x, y, z) <- split3 (n-1);
-                e1 <- Set.enum (enumerate_expr false bound x);
-                e2 <- Set.enum (enumerate_expr fold bound y);
-                e3 <- Set.enum (enumerate_expr false bound z)
+                e1 <- Set.enum (enumerate_expr false bound op1s op2s x);
+                e2 <- Set.enum (enumerate_expr fold bound op1s op2s y);
+                e3 <- Set.enum (enumerate_expr false bound op1s op2s z)
             ?];
             [? Set : If0 (e1, e2, e3) |
                 (x, y, z) <- split3 (n-1);
-                e1 <- Set.enum (enumerate_expr false bound x);
-                e2 <- Set.enum (enumerate_expr false bound y);
-                e3 <- Set.enum (enumerate_expr fold bound z)
+                e1 <- Set.enum (enumerate_expr false bound op1s op2s x);
+                e2 <- Set.enum (enumerate_expr false bound op1s op2s y);
+                e3 <- Set.enum (enumerate_expr fold bound op1s op2s z)
             ?];
             [? Set : Fold (e1, e2, e3) |
                (x, y, z) <- split3 (n-2);
-               e1 <- Set.enum (enumerate_expr false false x);
-               e2 <- Set.enum (enumerate_expr false false y);
-               e3 <- Set.enum (enumerate_expr false true z)
+               e1 <- Set.enum (enumerate_expr false false op1s op2s x);
+               e2 <- Set.enum (enumerate_expr false false op1s op2s y);
+               e3 <- Set.enum (enumerate_expr false true op1s op2s z)
             ?]
           ]
         else
           Set.unions [
             [? Set : Op1 (op, e) |
-                op <- List.enum [Not; Shl1; Shr1; Shr4; Shr16];
-                e <- Set.enum (enumerate_expr fold bound (n-1))
+                op <- List.enum op1s;
+                e <- Set.enum (enumerate_expr fold bound op1s op2s (n-1))
             ?];
             [? Set : Op2 (op, e1, e2) |
-                op <- List.enum [And; Or; Xor; Plus];
+                op <- List.enum op2s;
                 (x, y) <- split2 (n-1);
-                e1 <- Set.enum (enumerate_expr fold bound x);
-                e2 <- Set.enum (enumerate_expr fold bound y)
+                e1 <- Set.enum (enumerate_expr fold bound op1s op2s x);
+                e2 <- Set.enum (enumerate_expr fold bound op1s op2s y)
             ?];
             [? Set : If0 (e1, e2, e3) |
                 (x, y, z) <- split3 (n-1);
-                e1 <- Set.enum (enumerate_expr fold bound x);
-                e2 <- Set.enum (enumerate_expr fold bound y);
-                e3 <- Set.enum (enumerate_expr fold bound z)
+                e1 <- Set.enum (enumerate_expr fold bound op1s op2s x);
+                e2 <- Set.enum (enumerate_expr fold bound op1s op2s y);
+                e3 <- Set.enum (enumerate_expr fold bound op1s op2s z)
             ?]
           ]
     end
     in
-    Hashtbl.add memo (fold, bound, n) ans; ans
+    Hashtbl.add memo (fold, bound, op1s, op2s, n) ans; ans
 
-let enumerate_tfold_program n =
+let enumerate_tfold_program n op1s op2s =
   [? Set : Lambda (Fold (e1, e2, e3)) |
      (x, y, z) <- split3 (n-2);
-     e1 <- Set.enum (enumerate_expr false false x);
-     e2 <- Set.enum (enumerate_expr false false y);
-     e3 <- Set.enum (enumerate_expr false true z)
+     e1 <- Set.enum (enumerate_expr false false op1s op2s x);
+     e2 <- Set.enum (enumerate_expr false false op1s op2s y);
+     e3 <- Set.enum (enumerate_expr false true op1s op2s z)
   ?]
 
-let enumerate_program n =
-  Set.map (fun e -> Lambda e) (enumerate_expr true false (n-1))
+let enumerate_program n op1s op2s =
+  Set.map (fun e -> Lambda e) (enumerate_expr true false op1s op2s (n-1))
 
 let rec f i candidates =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (Set.cardinal candidates)));
@@ -234,9 +234,33 @@ let rec f i candidates =
     let evalA = eval evalQ in
     f (i+1) (List.fold_left (fun set (q, a) -> Set.filter (fun p -> eval_program q p = a) set) candidates (List.combine evalQ evalA))
 
+let string_to_op1 = function
+  | "not"   -> Not
+  | "shl1"  -> Shl1
+  | "shr1"  -> Shr1
+  | "shr4"  -> Shr4
+  | "shr16" -> Shr16
+  | x -> invalid_arg (x ^ " is not op1.")
+
+let string_to_op2 = function
+  | "and"  -> And
+  | "or"   -> Or
+  | "xor"  -> Xor
+  | "plus" -> Plus
+  | x -> invalid_arg (x ^ " is not op2.")
+
+let rec string_to_type = function
+  | hd :: tl ->
+    let op1s, op2s = string_to_type tl in
+    if List.mem hd ["not"; "shl1"; "shr1"; "shr4"; "shr16"] then (string_to_op1 hd) :: op1s, op2s else 
+      if List.mem hd ["and"; "or"; "xor"; "plus"] then op1s, (string_to_op2 hd) :: op2s else op1s, op2s
+  | [] -> [], []
+
 let () =
   let Problem (n, ops) = get_problem () in
-  let candidates = [? Set : p | i <- (2--n); p <- Set.enum (enumerate_program i) ?]
+  let enumerate = if List.mem "tfold" ops then enumerate_tfold_program else enumerate_program in
+  let op1s, op2s = string_to_type ops in
+  let candidates = [? Set : p | i <- (2--n); p <- Set.enum (enumerate i op1s op2s) ?]
   in
   if Array.mem "-v" Sys.argv then
     Set.iter (print_endline % program_to_string) candidates;
