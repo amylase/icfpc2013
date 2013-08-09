@@ -69,10 +69,13 @@ def solve(problem, solver_command):
         time.sleep(4)
 
 if __name__ == '__main__':
+    import sys
+    command =  './test_worker.py'
+    if len(sys.argv) == 2:
+        command = sys.argv[1]
+
     print 'solver: start.'
     
-    train = client.post_train(size = 3)
-    solve(train, './test_worker.py')
-    
-
+    train = client.post_train(size = 6)
+    solve(train, command)
 
