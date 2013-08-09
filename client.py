@@ -9,7 +9,7 @@ url_base = 'http://icfpc2013.cloudapp.net/'
 
 def post_myproblems():
     if not os.path.exists('problems.json'):
-        url_problem = url_base + 'myproblems' + '?auth=' + user_id
+        url_problem = url_base + 'myproblems?auth=' + user_id
         print url_problem
         with open('problems.json', 'w') as writer:
             writer.write(urllib2.urlopen(url_problem).read())
@@ -19,7 +19,7 @@ def post_myproblems():
         return json.load(reader)
 
 def post_train():
-    url_train = url_base + 'train' + '?auth=' + user_id
+    url_train = url_base + 'train?auth=' + user_id
     return json.load(urllib2.urlopen(url_train))
 
 def post_eval(problem, args):
