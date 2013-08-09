@@ -4,7 +4,7 @@ import client
 import subprocess
 import time
 
-wait_time = 1
+wait_time = 5
 
 def problem_string(problem):
     ret = ''
@@ -19,9 +19,11 @@ def parse_query(query_line):
     if query['type'] == 'eval':
         # eval query
         query['arguments'] = map(int, words[2:])
-    else:
+    elif query['type'] == 'guess':
         # guess query
         query['program'] = query_line[6:].strip()
+    else:
+        # skip query
     return query
 
 def eval_result_string(eval_result):
@@ -64,7 +66,7 @@ def solve(problem, solver_command):
                     break
             worker.stdin.write(eval_result_string(result) + '\n')
             worker.stdin.flush()
-        else:
+        elif query['type'] == 'guess':
             while True:
                 print 'solver: query:', query
                 time.sleep(wait_time)
@@ -83,11 +85,15 @@ def solve(problem, solver_command):
             if result['status'] == 'win':
                 print 'solver: We have solved the problem id', problem['id'], '!!'
                 return
-
+        else:
+            print 'solver: This problem was skipped.'
+            break
+    worker.kill()
+    return
 
 def solve_honban(condition, command):
-    problems = client.post_myproblems(update = True)
     time.sleep(wait_time)
+    problems = client.post_myproblems(update = True)
     for problem in problems:
         if condition(problem) and not problem.get('solved', False) and problem.get('timeLeft', 300.) > 0.:
             solve(problem, command)
@@ -100,9 +106,16 @@ def solve_honban_id(ids, command):
 
 if __name__ == '__main__':
     import sys
-    command = sys.argv[1] if len(sys.argv) == 2 else './test_worker.py'
+    command = sys.argv[1] if len(sys.argv) == 2 else './enumerate_ml/enumerate'
 
     print 'solver: start.'
+
+    def cond(prob):
+        return prob['size'] <= 9
+    solve_honban(cond, command)
+    
+    quit()
+
     for i in xrange(20):
         while True:
             train = client.post_train(size = 5)
@@ -114,9 +127,6 @@ if __name__ == '__main__':
 
     quit()
 
-    def cond(prob):
-        return prob['size'] <= 5
-    solve_honban(cond, command)
 
 
 
