@@ -243,10 +243,13 @@ let enumerate_program n op1s op2s fold if0 =
 let rec f i candidates =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (Set.cardinal candidates)));
   if Set.cardinal candidates < 100 || true then
-    match guess (program_to_string (Set.choose candidates)) with
+    let candidate, next_candidates = Set.pop candidates
+    in
+    match guess (program_to_string candidate) with
     | Win -> ()
+    | Unknown -> f (i+1) next_candidates
     | Mismatch (input, expected, _) ->
-      f (i+1) (Set.filter (fun p -> eval_program input p = expected) candidates)
+      f (i+1) (Set.filter (fun p -> eval_program input p = expected) next_candidates)
   else
     let evalQ = List.init 256 (fun _ -> of_int (Random.int 0xfffffff)) in
     let evalA = eval evalQ in

@@ -37,6 +37,9 @@ def guess_result_string(guess_result):
     if ret == 'mismatch':
         decs = map(lambda x: str(int(x, 16)), guess_result['values'])
         ret += ' ' + ' '.join(decs)
+    if ret == 'error' and guess_result['message'].find('Unable to decide equality') >= 0:
+        # server unable to decide.
+        ret = 'unknown'
     return ret
 
 def solve(problem, solver_command):
@@ -87,6 +90,9 @@ def solve(problem, solver_command):
                 if result['status'] == 'error':
                     if result['message'].find('Too many requests') >= 0:
                         print 'solver: Query refused because of too many requests. Retry.'
+                    if result['message'].find('Unable to decide equality') >= 0:
+                        print 'solver: Server could not decide equality. Demand new guess.'
+                        break
                     else:
                         print 'solver: error occured in guess query.'
                         print result['message']
@@ -124,14 +130,14 @@ if __name__ == '__main__':
     print 'solver: start.'
     """
     def cond(prob):
-        return prob['size'] <= 10
+        return prob['size'] <= 11
     solve_honban(cond, command)
     
     quit()
     """
     for i in xrange(20):
         while True:
-            train = client.post_train(size = 12)
+            train = client.post_train(size = 11)
             if train.has_key('status'):
                 print train
             else:

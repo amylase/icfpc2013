@@ -5,7 +5,7 @@ type problem = Problem of int * string list
 
 type eval = Eval of int list
 
-type guess = Win | Mismatch of uint64 * uint64 * uint64
+type guess = Win | Mismatch of uint64 * uint64 * uint64 | Unknown
 
 let get_problem () =
   let n :: _ :: ops = String.nsplit ~by:" " (read_line ())
@@ -32,6 +32,8 @@ let guess str =
   let () = prerr_endline ("guessA: " ^ str) in
   if str = "win" then
     Win
+  else if str = "unknown" then
+    Unknown
   else
     let mismatch :: input :: expected :: your :: _ = String.nsplit ~by:" " str
     in

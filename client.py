@@ -8,7 +8,7 @@ url_base = 'http://icfpc2013.cloudapp.net/'
 # url_base + {'myproblems, train, eval, guess'} + '?auth=' + user_id
 
 def post_myproblems(update = True):
-    if not os.path.exists('problems.json') or update = True:
+    if not os.path.exists('problems.json') or update == True:
         url_problem = url_base + 'myproblems?auth=' + user_id
         print url_problem
         with open('problems.json', 'w') as writer:
