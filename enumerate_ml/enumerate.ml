@@ -1,5 +1,6 @@
 open MyBatteries
 open MyStd
+open Protocol
 
 type id = string
 type op1 = Not | Shl1 | Shr1 | Shr4 | Shr16
@@ -127,11 +128,23 @@ let rec enumerate_expr fold n =
     in
     Hashtbl.add memo (fold, n) ans; ans
 
+let enumerate_tfold_program n =
+  [? Set : Lambda (Fold (e1, e2, e3)) |
+     (x, y, z) <- split3 (n-2);
+     e1 <- Set.enum (enumerate_expr false x);
+     e2 <- Set.enum (enumerate_expr false y);
+     e3 <- Set.enum (enumerate_expr false z)
+  ?]
+
 let enumerate_program n =
   Set.map (fun e -> Lambda e) (enumerate_expr true (n-1))
 
-let solve n =
-  let ans = enumerate_program n
+let () =
+  let Problem (n, ops) = get_problem ()
+  in
+  let enumerate = if Array.mem "-tfold" Sys.argv then enumerate_tfold_program else enumerate_program
+  in
+  let candidates = [? Set : p | i <- (2--n); p <- Set.enum (enumerate i) ?]
   in
   if Array.mem "-v" Sys.argv then
     Set.iter (print_endline % program_to_string) ans;
