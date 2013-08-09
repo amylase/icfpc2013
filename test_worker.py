@@ -31,17 +31,19 @@ if __name__ == '__main__':
     say('worker: query post. ' + guess_prog)
     guess_result = sys.stdin.readline().strip().split(' ')
     say('worker: result recieved. ' + guess_result[0])
+    if guess_result[0] == 'win': quit()
 
     guess_prog = 'guess (lambda (x) (%s x))' % operators[0]
     query(guess_prog)
     say('worker: query post. ' + guess_prog)
     guess_result = sys.stdin.readline().strip().split(' ')
     say('worker: result recieved. ' + guess_result[0])
+    if guess_result[0] == 'win': quit()
 
     guess_prog = 'guess (lambda (x) (%s x))' % operators[0]
     query(guess_prog)
     say('worker: query post. ' + guess_prog)
     guess_result = sys.stdin.readline().strip().split(' ')
     say('worker: result recieved. ' + guess_result[0])
-
+    if guess_result[0] == 'win': quit()
 
