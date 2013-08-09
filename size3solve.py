@@ -8,9 +8,9 @@ ps = client.post_myproblems()
 for p in ps:
     if p['size'] == 3:
         if 'not' in p['operators']:
+            continue
             print p
             print 'this case is already solved.'
-            continue
             print client.post_eval(p, [2])
             res = int(client.post_eval(p, [2])['outputs'][0], 16)
             print res
@@ -29,9 +29,9 @@ for p in ps:
             print client.post_guess(p, program)
 
         elif 'shl1' in p['operators']:
+            continue
             print p
             print 'this case is already solved.'
-            continue
             res = int(client.post_eval(p, [2])['outputs'][0], 16)
             print res
             program = '(lambda (x) (shl1 arg))'
@@ -66,8 +66,8 @@ for p in ps:
             time.sleep(10)
 
         elif 'shr4' in p['operators']:
-            print p
             continue
+            print p
             res = int(client.post_eval(p, [1 << 4])['outputs'][0], 16)
             print res
             program = '(lambda (x) (shr4 arg))'
@@ -78,8 +78,7 @@ for p in ps:
             print client.post_guess(p, program1)
             time.sleep(10)
 
-        elif 'shl16' in p['operators']:
-            continue
+        elif 'shr16' in p['operators']:
             print p
             res = int(client.post_eval(p, [1 << 16])['outputs'][0], 16)
             print res
