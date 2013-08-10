@@ -194,9 +194,83 @@ let enumerate_tfold_program n op1s op2s fold if0 =
 
 type c = uint64 * uint64
 let c_dummy = (zero, zero)
+let ones = lognot zero
 
 let uint_to_c x =
   (lognot x, x)
+
+let shift_left_with_one n m =
+  logor (shift_left n m) (sub (shift_left one m) one)
+
+let rec fold_or' init vec n =
+  if n = 0 then
+    init
+  else
+    fold_or' (logor (logand vec (of_int 0xff)) init) (shift_right vec 8) (n-1)
+
+let fold_or vec =
+  fold_or' zero vec 8
+
+let rec eval (i0, i1) x y z expr =
+  let (r0, r1) = match expr with
+    | Zero -> (ones, zero)
+    | One -> (zero, ones)
+    | Var "x" -> x
+    | Var "y" -> y
+    | Var "z" -> z
+    | Var _ -> (zero, zero)
+    | Op1 (Not, e) ->
+      let (o0, o1) = eval (i1, i0) x y z e in
+      (o1, o0)
+    | Op1 (Shl1, e) ->
+      let shift n = 
+        logor (shift_right n 1) (shift_left one 63) in
+      let (o0, o1) = eval (shift i0, shift i1) x y z e in
+      (shift_left o0 1, shift_left o1 1)
+    | Op1 (Shr1, e) ->
+      let (o0, o1) = eval (shift_left_with_one i0 1, shift_left_with_one i1 1) x y z e in
+      (shift_right o0 1, shift_right o1 1)
+    | Op1 (Shr4, e) ->
+      let (o0, o1) = eval (shift_left_with_one i0 4, shift_left_with_one i1 4) x y z e in
+      (shift_right o0 4, shift_right o1 4)
+    | Op1 (Shr16, e) ->
+      let (o0, o1) = eval (shift_left_with_one i0 16, shift_left_with_one i1 16) x y z e in
+      (shift_right o0 16, shift_right o1 16)
+    | Op2 (And, e1, e2) ->
+      let (o0, o1) = eval (i0, ones) x y z e1 in
+      let (p0, p1) = eval (i0, ones) x y z e2 in
+      (logor o0 p0, logand o1 p1)
+    | Op2 (Or, e1, e2) ->
+      let (o0, o1) = eval (ones, i1) x y z e1 in
+      let (p0, p1) = eval (ones, i1) x y z e2 in
+      (logand o0 p0, logor o1 p1)
+    | Op2 (Xor, e1, e2) ->
+      let (o0, o1) = eval (ones, ones) x y z e1 in
+      let (p0, p1) = eval (logor (logand i0 o0) (logand i1 o1),
+                           logor (logand i0 o1) (logand i1 o0)) x y z e2 in
+      (logor (logand o0 p0) (logand o1 p1), logor (logand o0 p1) (logand o1 p0))
+    | Op2 (Plus, _, _) ->
+      (ones, ones)
+    | If0 (e1, e2, e3) ->
+      let (o0, o1) = eval (ones, ones) x y z e1 in
+      if o1 = zero then
+        eval (i0, i1) x y z e2
+      else if o0 <> ones then
+        eval (i0, i1) x y z e3
+      else
+        let (p0, p1) = eval (i0, i1) x y z e2 in
+        let (q0, q1) = eval (i0, i1) x y z e3 in
+        (logor p0 q0, logor q0 q1)
+    | Fold (e1, e2, e3) ->
+      (*
+      let (o0, o1) = eval (ones, ones) x y z e1 in
+      let (p0, p1) = eval (ones, ones) x y z e2 in
+      *)
+      eval (ones, ones) x (fold_or i0, fold_or i1) (ones, ones) e3
+    | Tree _ ->
+      (ones, ones)
+  in
+  (logand i0 r0, logand i0 r1)
 
 let rec gen w (size, fold, bound) =
   raise Todo
