@@ -12,7 +12,7 @@ let get_problem () =
   in
   Problem (int_of_string n, ops)
 
-let eval lst =
+let query lst =
   let n = List.length lst
   in
   print_endline ("eval " ^ string_of_int n ^ " " ^ String.join " " (List.map to_string lst));

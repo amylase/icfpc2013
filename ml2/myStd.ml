@@ -84,3 +84,17 @@ module List = struct
     f 0 lst
 
 end
+
+let split2 n =
+  if n < 2 then
+    Enum.empty ()
+  else
+    List.enum (List.map (fun x -> (x, n - x)) (List.init (n-1) ((+)1)))
+
+let split3 n =
+  if n < 3 then
+    Enum.empty ()
+  else
+    [? (x, y, z) | x <- Enum.init (n-2) ((+)1);
+                   (y, z) <- split2 (n-x)
+    ?]
