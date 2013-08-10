@@ -3,3 +3,6 @@
 *.o
 enumerate
 main
+qtest
+*.log
+*.cmo

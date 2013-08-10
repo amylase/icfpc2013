@@ -52,6 +52,7 @@ let rec expr_to_string = function
   | Fold (e1, e2, e3) -> "(fold " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ " (lambda (y z) " ^ expr_to_string e3 ^ "))"
   | Op1 (op, e) -> "(" ^ op1_to_string op ^ " " ^ expr_to_string e ^ ")"
   | Op2 (op, e1, e2) -> "(" ^ op2_to_string op ^ " " ^ expr_to_string e1 ^ " " ^ expr_to_string e2 ^ ")"
+  | Tree (size, _, _) -> "[" ^ string_of_int size ^ "]"
 
 let program_to_string (Lambda e) =
   "(lambda (x) " ^ expr_to_string e ^ ")"
