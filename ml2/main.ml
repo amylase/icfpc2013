@@ -272,57 +272,111 @@ let rec eval (i0, i1) x y z expr =
   in
   (logand i0 r0, logand i0 r1)
 
-let rec gen w (size, fold, bound) =
-  raise Todo
-
-let rec expand = function
+let rec gen w (size, fold, bound) (op1s : Syntax.op1 list) op2s if0 =
+  if w = 0 then
+    Set.singleton (Tree (size, fold, bound))
+  else
+    match size with
+    | 0 -> invalid_arg "zero is not allowed."
+    | 1 -> 
+      Set.of_list
+        (if bound then [Zero; One; Var "x"; Var "y"; Var "z"] else [Zero; One; Var "x"])
+    | n ->
+      if fold then
+        Set.unions [
+          [? Set : Op1 (op, e) |
+             op <- List.enum op1s;
+             e <- Set.enum (gen (w-1) (size-1, fold, bound) op1s op2s if0)
+          ?];
+          [? Set : Op2 (op, e1, Tree (y, false, bound)) |
+             op <- List.enum op2s;
+             (x, y) <- split2 (n-1);
+             x <= y;
+             e1 <- Set.enum (gen (w-1) (x, fold, bound) op1s op2s if0)
+          ?];
+          [? Set : Op2 (op, e1, Tree (y, fold, bound)) |
+             op <- List.enum op2s;
+             (x, y) <- split2 (n-1);
+             x <= y;
+             e1 <- Set.enum (gen (w-1) (x, false, bound) op1s op2s if0)
+          ?];
+          if if0 then
+            [? Set : If0 (e1, Tree (y, false, bound), Tree (z, false, bound)) |
+               (x, y, z) <- split3 (n-1);
+               (b1, b2, b3) <- List.enum [(fold, false, false); (false, fold, false); (false, false, fold) ];
+               e1 <- Set.enum (gen (w-1) (x, fold, bound) op1s op2s if0)
+            ?]
+          else
+            Set.empty;
+          [? Set : Fold (e1, Tree (y, false, false), Tree (z, false, true)) |
+             (x, y, z) <- split3 (n-2);
+             e1 <- Set.enum (gen (w-1) (x, false, false) op1s op2s if0)
+          ?]
+        ]
+        else
+          Set.unions [
+            [? Set : Op1 (op, e) |
+               op <- List.enum op1s;
+               e <- Set.enum (gen (w-1) (n-1, fold, bound) op1s op2s if0)
+            ?];
+            [? Set : Op2 (op, e1, Tree (y, fold, bound)) |
+               op <- List.enum op2s;
+               (x, y) <- split2 (n-1);
+               e1 <- Set.enum (gen (w-1) (x, fold, bound) op1s op2s if0)
+            ?];
+            if if0 then
+              [? Set : If0 (e1, Tree (y, fold, bound), Tree (z, fold, bound)) |
+                 (x, y, z) <- split3 (n-1);
+                 e1 <- Set.enum (gen (w-1) (x, fold, bound) op1s op2s if0)
+              ?]
+            else
+              Set.empty
+          ]
+      
+let rec expand op1s op2s if0 = function
   | Zero -> Set.singleton Zero
   | One  -> Set.singleton One
   | Var id -> Set.singleton (Var id)
   | Op1 (op, e) -> 
-    let es = expand e in
+    let es = expand op1s op2s if0 e in
     Set.map (fun e' -> Op1 (op, e')) es
   | Op2 (op, e1, e2) ->
-    let e1s = expand e1 in
+    let e1s = expand op1s op2s if0 e1 in
     if Set.cardinal e1s <> 1 then
       Set.map (fun e1' -> Op2 (op, e1', e2)) e1s
     else
-      let e2s = expand e2 in
+      let e2s = expand op1s op2s if0 e2 in
       Set.map (fun e2' -> Op2 (op, Set.choose e1s, e2')) e2s
   | If0 (e1, e2, e3) ->
-    let e1s = expand e1 in
+    let e1s = expand op1s op2s if0 e1 in
     if Set.cardinal e1s <> 1 then
       Set.map (fun e1' -> If0 (e1', e2, e3)) e1s
     else 
-      let e2s = expand e2 in
+      let e2s = expand op1s op2s if0 e2 in
       if Set.cardinal e2s <> 1 then
         Set.map (fun e2' -> If0 (Set.choose e1s, e2', e3)) e2s
       else
-        let e3s = expand e3 in
+        let e3s = expand op1s op2s if0 e3 in
         Set.map (fun e3' -> If0 (Set.choose e1s, Set.choose e2s, e3')) e3s
   | Fold (e1, e2, e3) ->
-    let e1s = expand e1 in
+    let e1s = expand op1s op2s if0 e1 in
     if Set.cardinal e1s <> 1 then
       Set.map (fun e1' -> Fold (e1', e2, e3)) e1s
     else 
-      let e2s = expand e2 in
+      let e2s = expand op1s op2s if0 e2 in
       if Set.cardinal e2s <> 1 then
         Set.map (fun e2' -> Fold (Set.choose e1s, e2', e3)) e2s
       else
-        let e3s = expand e3 in
+        let e3s = expand op1s op2s if0 e3 in
         Set.map (fun e3' -> Fold (Set.choose e1s, Set.choose e2s, e3')) e3s
   | Tree chara ->
-    gen 2 chara
+    gen 2 chara op1s op2s if0
 
-let rec expand_n n expr =
+let rec expand_n n expr op1s op2s if0 =
   if n = 0 then 
     (Set.singleton expr : Syntax.expr Set.t)
   else
-    [? Set : expr' | expr'' <- Set.enum (expand_n (n-1) expr); expr' <- Set.enum (expand expr'') ?] 
-
-let eval c x y z = function
-  | Zero -> raise Todo 
-  | _ -> raise Todo
+    [? Set : expr' | expr'' <- Set.enum (expand_n (n-1) expr op1s op2s if0); expr' <- Set.enum (expand op1s op2s if0 expr'') ?] 
 
 let can input expected expr =
   let (o0, o1) = 
@@ -330,11 +384,11 @@ let can input expected expr =
   in
   lognot (logor o0 o1) = zero
 
-let rec main op1s op2s if0 fold candidates qas =
+let rec main op1s op2s if0 candidates qas =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (Set.cardinal candidates)));
 
   let candidates = 
-    [? Set : expr' | expr <- Set.enum candidates; expr' <- Set.enum (expand_n 3 expr) ?] 
+    [? Set : expr' | expr <- Set.enum candidates; expr' <- Set.enum (expand_n 3 expr op1s op2s if0) ?] 
   in
   let cs = Set.filter complete candidates in  
   if not (Set.is_empty cs) then
@@ -342,15 +396,15 @@ let rec main op1s op2s if0 fold candidates qas =
     in
     match guess (program_to_string (Lambda e)) with
     | Win -> ()
-    | Unknown -> main op1s op2s if0 fold next_candidates qas
+    | Unknown -> main op1s op2s if0 next_candidates qas
     | Mismatch (input, expected, _) ->
-      main op1s op2s if0 fold
+      main op1s op2s if0
         (Set.filter (can input expected) candidates)
         (Set.add (input, expected) qas)
   else
     let q = Uint64.of_int64 (Random.int64 Int64.max_int) in
     let [a] = query [q] in
-    main op1s op2s if0 fold
+    main op1s op2s if0
       (Set.filter (can q a) candidates)
       (Set.add (q, a) qas)
 
@@ -366,6 +420,6 @@ let () =
   let op1s, op2s = string_to_type ops in
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
-  main op1s op2s fold if0
-    [? Set : expr | size <- (1--(n-1)); expr <- Set.enum (expand_n 5 (Tree (size, fold, false))) ?] Set.empty
+  main op1s op2s if0
+    [? Set : expr | size <- (1--(n-1)); expr <- Set.enum (expand_n 5 (Tree (size, fold, false)) op1s op2s if0) ?] Set.empty
 
