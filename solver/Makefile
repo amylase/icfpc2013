@@ -1,10 +1,10 @@
 OBJS = SyntaxTree.o main.o
 
 main: $(OBJS)
-	c++ -O3 -g -o $@ $(OBJS)
+	c++ -O3 -std=c++0x -o $@ $(OBJS)
 
 .cpp.o:
-	c++ -O3 -g -c $<
+	c++ -O3 -std=c++0x -c $<
 
 .PHONY: clean
 

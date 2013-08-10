@@ -34,10 +34,10 @@ int operationChildNum[] = {
 SyntaxTree::SyntaxTree() {
 }
 
-SyntaxTree::SyntaxTree(Operation op, int varNum, SyntaxTree* child1, SyntaxTree* child2, SyntaxTree* child3) {
+SyntaxTree::SyntaxTree(Operation op, int varNum, const SyntaxTree* child1, const SyntaxTree* child2, const SyntaxTree* child3) {
     this->op = op;
     this->varNum = varNum;
-    SyntaxTree* childs[3] = {child1, child2, child3};
+    const SyntaxTree* childs[3] = {child1, child2, child3};
     for (int i = 0; i < operationChildNum[op]; i++) {
         SyntaxTree* c = new SyntaxTree();
         *c = *(childs[i]);
@@ -61,7 +61,7 @@ SyntaxTree::~SyntaxTree() {
     }
 }
 
-string SyntaxTree::toString() {
+string SyntaxTree::toString() const {
     switch (this->op) {
     case ZERO:
     case ONE:
@@ -84,28 +84,28 @@ string SyntaxTree::toString() {
             this->child[1]->toString() + " " + this->child[2]->toString() + ")";
     case FOLD:
         return "(" + this->opName() + " " + this->child[0]->toString() + " " +
-            this->child[1]->toString() + " (lambda (" + this->varName(varNum) + " " +
-            this->varName(varNum + 1) + ") " + this->child[2]->toString() + "))";
+            this->child[1]->toString() + " (lambda (" + this->varName(1) + " " +
+            this->varName(2) + ") " + this->child[2]->toString() + "))";
     }
 }
     
-string SyntaxTree::opName() {
+string SyntaxTree::opName() const {
     return operationName[this->op];
 }
 
-string SyntaxTree::varName(int n) {
+string SyntaxTree::varName(int n) const {
     stringstream ss;
     ss << "v";
     ss << n;
     return ss.str();
 }
 
-unsigned long long SyntaxTree::eval(unsigned long long x) {
+unsigned long long SyntaxTree::eval(unsigned long long x) const {
     var[0] = x;
     this->evalSub();
 }
 
-unsigned long long SyntaxTree::evalSub() {
+unsigned long long SyntaxTree::evalSub() const {
     switch (this->op) {
     case ZERO:
         return 0;
@@ -114,7 +114,7 @@ unsigned long long SyntaxTree::evalSub() {
     case VAR:
         return var[this->varNum];
     case NOT:
-        return ~this->child[0]->evalSub();
+        return ~(this->child[0]->evalSub());
     case SHL1:
         return this->child[0]->evalSub() << 1LL;
     case SHR1:
@@ -137,7 +137,7 @@ unsigned long long SyntaxTree::evalSub() {
         unsigned long long x = this->child[0]->evalSub();
         var[2] = this->child[1]->evalSub();
         for (int i = 0; i < 8; i++) {
-            var[1] = (x >> ((7 - i) * 8)) & 0xFF;
+            var[1] = (x >> i * 8) & 0xFF;
             var[2] = this->child[2]->evalSub();
         }
         return var[2];
@@ -155,7 +155,7 @@ SyntaxTree& SyntaxTree::operator=(const SyntaxTree& obj){
     }
 }
 
-bool SyntaxTree::operator<(const SyntaxTree& obj) {
+bool SyntaxTree::operator<(const SyntaxTree& obj) const {
     if (this->op < obj.op)return true;
     if (this->op > obj.op)return false;
     if (this->op == VAR)return this->varNum < obj.varNum;
@@ -167,11 +167,11 @@ bool SyntaxTree::operator<(const SyntaxTree& obj) {
     return false;
 }
 
-bool SyntaxTree::operator<=(const SyntaxTree& obj) {
+bool SyntaxTree::operator<=(const SyntaxTree& obj) const {
     return !(*this > obj);
 }
 
-bool SyntaxTree::operator>(const SyntaxTree& obj) {
+bool SyntaxTree::operator>(const SyntaxTree& obj) const {
     if (this->op > obj.op)return true;
     if (this->op < obj.op)return false;
     if (this->op == VAR)return this->varNum > obj.varNum;
@@ -183,11 +183,11 @@ bool SyntaxTree::operator>(const SyntaxTree& obj) {
     return false;
 }
 
-bool SyntaxTree::operator>=(const SyntaxTree& obj) {
+bool SyntaxTree::operator>=(const SyntaxTree& obj) const {
     return !(*this < obj);
 }
 
-bool SyntaxTree::operator==(const SyntaxTree& obj) {
+bool SyntaxTree::operator==(const SyntaxTree& obj) const {
     if (this->op < obj.op)return false;
     if (this->op > obj.op)return false;
     if (this->op == VAR)return this->varNum == obj.varNum;
