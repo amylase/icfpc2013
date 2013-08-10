@@ -55,12 +55,13 @@ def solve(problem, solver_command):
     while True:
         # wait at most 60 seconds
         try:
-            def handler(signum, frame): raise Exception('Enumeration failed.')
+            def handler(signum, frame): 
+                if signum == signal.SIGALRM: raise Exception('Enumeration failed.')
             signal.signal(signal.SIGALRM, handler)
             signal.alarm(60)
             raw_query = worker.stdout.readline()
             signal.alarm(0)
-        except:
+        except Exception:
             print 'Enumeration takes more than 60 secs. Skipped.'
             signal.alarm(0)
             break
@@ -122,6 +123,8 @@ def solve_honban_id(ids, command):
     for problem in problems:
         if problem['id'] == ids and not problem.get('solved', False) and problem.get('timeLeft', 300.) > 0.:
             solve(command)
+            print 'solver: You can kill solver now. (3 secs given)'
+            time.sleep(3)
 
 if __name__ == '__main__':
     import sys
