@@ -129,8 +129,11 @@ if __name__ == '__main__':
 
     print 'solver: start.'
 
-    def cond(prob): # problem(dict) -> bool. true iff prob is what you want to tackle.
-        return prob['size'] <= 11 
-    solve_honban(cond, command)
-
-
+    for i in xrange(20): # set number of test cases.
+        while True:
+            train = client.post_train(size = 11)
+            if train.has_key('status'):
+                print train
+            else:
+                break
+        solve(train, command)
