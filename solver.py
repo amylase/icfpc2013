@@ -75,7 +75,7 @@ def solve(problem, solver_command):
             print 'solver: worker elapsed time:', worker_time, 'sec.'
             signal.alarm(0)
         except Exception:
-            print emph('Enumeration takes more than 60 secs. Skipped.')
+            print emph('solver: Enumeration takes more than 240 secs. Skipped.')
             signal.alarm(0)
             break
         
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     print 'solver: start.'
 
     def cond(prob): # problem(dict) -> bool. true iff prob is what you want to tackle.
-        return prob['size'] <= 11 
+        return prob['size'] <= 12
     solve_honban(cond, command)
 
 

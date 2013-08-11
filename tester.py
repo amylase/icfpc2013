@@ -17,6 +17,8 @@ if __name__ == '__main__':
     size = int(sys.argv[2]) if len(sys.argv) >= 3 else 8
     print 'solver: start.'
 
+    # solver.solve(client.get_problem_by_id('give id here'), command)
+
     for i in xrange(200): # set number of test cases.
         while True:
             train = client.post_train(size = size)
