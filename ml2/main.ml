@@ -26,21 +26,29 @@ let rec can_optimize_expr expr =
     can_optimize_expr e ||
       begin match op, e with
       | Not, Op1 (Not, _) -> true
+      | Shr1, Zero -> true
+      | Shr1, One  -> true
+      | Shr4, Zero -> true
+      | Shr4, One  -> true
+      | Shr16, Zero -> true
+      | Shr16, One -> true
       | _ -> false
       end
   | Op2 (op, e1, e2) ->
     can_optimize_expr e1 || can_optimize_expr e2 ||
       begin match op, e1, e2 with
-      | And, Zero, _
-      | And, _, Zero
-      | And, One, One
-      | Or, Zero, _
-      | Or, _, Zero
-      | Or, One, One
-      | Xor, Zero, _
-      | Xor, _, Zero
-      | Xor, One, One
-      | Plus, Zero, _
+      | _, Tree _, _ -> false
+      | _, _, Tree _ -> false
+      | And, Zero, _ -> true
+      | And, _, Zero -> true
+      | And, e1, e2 -> complete e1 && complete e2 && e1 = e2
+      | Or, Zero, _ -> true
+      | Or, _, Zero -> true
+      | Or, e1, e2 -> complete e1 && complete e2 && e1 = e2
+      | Xor, Zero, _ -> true
+      | Xor, _, Zero -> true
+      | Xor, e1, e2 -> complete e1 && complete e2 && e1 = e2
+      | Plus, Zero, _ -> true
       | Plus, _, Zero -> true
       | _ -> false
       end
@@ -332,17 +340,17 @@ let rec split_at n lst =
 let rec main op1s op2s fold if0 candidates qas =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (List.length candidates)));
   (*Set.iter (prerr_endline % expr_to_string) candidates;*)
-  let will_expand, candidates = split_at 10000 candidates in
+  let will_expand, candidates = split_at 1000 candidates in
   prerr_endline ("size (hd will_expand) = " ^ string_of_int (Syntax.size (List.hd will_expand)));
   let candidates =
     List.filter
       (fun candidate -> Set.for_all (fun (q, a) -> can q a candidate) qas)
-      (List.rev_append (List.rev [? List : expr' | expr <- List.enum will_expand; expr' <- List.enum (expand_n 3 fold expr op1s op2s if0) ?]) candidates)
+      (List.rev_append (List.rev [? List : expr' | expr <- List.enum will_expand; expr' <- List.enum (expand_n 1 fold expr op1s op2s if0) ?]) candidates)
   in
   prerr_endline ("candidates after expansion = " ^ (string_of_int (List.length candidates)));
   let cs = List.filter complete candidates in
   prerr_endline ("complete candidates = " ^ (string_of_int (List.length cs)));
-  if (List.length candidates >= 10000 || List.length cs = List.length candidates) && (not (List.is_empty cs)) then
+  if (not (List.is_empty cs)) then
     let e :: next_candidates = cs
     in
     match guess (program_to_string (Lambda e)) with
@@ -377,4 +385,4 @@ let () =
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
   main op1s op2s fold if0
-    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_until 10 10000 fold [(Tree size)] op1s op2s if0) ?] Set.empty
+    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_until 3 10000 fold [(Tree size)] op1s op2s if0) ?] Set.empty
