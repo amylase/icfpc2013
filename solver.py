@@ -10,9 +10,12 @@ if is_local:
 else:
     import client
 
-wait_time = 5
-def wait_server(wait_time = 5):
-    if not is_local: time.sleep(5)
+def emph(string):
+    return '\033[31m' + string + '\033[0m'
+
+default_wait = 5
+def wait_server(wait_time = default_wait):
+    if not is_local: time.sleep(max(wait_time, 0))
 
 def problem_string(problem):
     ret = ''
@@ -66,10 +69,13 @@ def solve(problem, solver_command):
                 if signum == signal.SIGALRM: raise Exception('Enumeration failed.')
             signal.signal(signal.SIGALRM, handler)
             signal.alarm(60)
+            worker_time = time.time()
             raw_query = worker.stdout.readline()
+            worker_time = time.time() - worker_time
+            print 'solver: worker elapsed time:', worker_time, 'sec.'
             signal.alarm(0)
         except Exception:
-            print 'Enumeration takes more than 60 secs. Skipped.'
+            print emph('Enumeration takes more than 60 secs. Skipped.')
             signal.alarm(0)
             break
         
@@ -77,13 +83,13 @@ def solve(problem, solver_command):
         if query['type'] == 'eval':
             while True:
                 print 'solver: query:', query
-                wait_server()
+                wait_server(default_wait - worker_time)
                 result = client.post_eval(problem, query['arguments'])
                 if result['status'] == 'error':
                     if result['message'].find('Too many requests') >= 0:
-                        print 'solver: Query refused because of too many requests. Retry.'
+                        print emph('solver: Query refused because of too many requests. Retry.')
                     else:
-                        print 'solver: error occured in eval query.'
+                        print emph('solver: error occured in eval query.')
                         print result['message']
                         return
                 else:
@@ -93,16 +99,16 @@ def solve(problem, solver_command):
         elif query['type'] == 'guess':
             while True:
                 print 'solver: query:', query
-                wait_server()
+                wait_server(default_wait - worker_time)
                 result = client.post_guess(problem, query['program'])
                 if result['status'] == 'error':
                     if result['message'].find('Too many requests') >= 0:
-                        print 'solver: Query refused because of too many requests. Retry.'
+                        print emph('solver: Query refused because of too many requests. Retry.')
                     if result['message'].find('Unable to decide equality') >= 0:
-                        print 'solver: Server could not decide equality. Demand new guess.'
+                        print emph('solver: Server could not decide equality. Demand new guess.')
                         break
                     else:
-                        print 'solver: error occured in guess query.'
+                        print emph('solver: error occured in guess query.')
                         print result['message']
                         return
                 else:
@@ -110,10 +116,10 @@ def solve(problem, solver_command):
             worker.stdin.write(guess_result_string(result) + '\n')
             worker.stdin.flush()
             if result['status'] == 'win':
-                print 'solver: We have solved the problem id', problem['id'], '!!'
+                print emph('solver: We have solved the problem id ' + problem['id'] + ' !!')
                 return
         else:
-            print 'solver: This problem was skipped.'
+            print emph('solver: This problem was skipped.')
             break
     worker.kill()
     return
