@@ -89,6 +89,28 @@ let rec uint_fold' f init vec n =
 let uint_fold f init vec =
   uint_fold' f init vec 8
 
+let plus_eval (o0, o1) (p0, p1) (r0, r1) =
+  let max = add (add o1 p1) r1 in
+  let isone (b0, b1) = logand b1 (lognot b0) in
+  let min = add (add (isone (o0, o1)) (isone (p0, p1))) (isone (r0, r1)) in
+  let two = of_int 2 in
+  ((if min <= one then one else zero), (if max >= two then one else zero)),
+  ((if max != min or rem min two = zero then one else zero), (if max != min or rem min two = one then one else zero))
+
+let rec uint_fold_eval' i o p r n =
+  if n = 0 then
+    i
+  else
+    let pos = 64 - n in
+    let i0, i1 = i in
+    let get_bit (b0, b1) = logand one (shift_right b0 pos), logand one (shift_right b1 pos) in
+    let nr, (ni0, ni1) = plus_eval (get_bit o) (get_bit p) r in
+    let ni = logor i0 (shift_left ni0 pos), logor i1 (shift_left ni1 pos) in
+    uint_fold_eval' ni o p nr (n-1)
+
+let uint_fold_eval o p =
+  uint_fold_eval' (zero, zero) o p (zero, zero) 64
+
 let rec eval (i0, i1) x y z expr =
   let (r0, r1) = match expr with
     | Zero -> (ones, zero)
@@ -131,7 +153,7 @@ let rec eval (i0, i1) x y z expr =
       if (logxor o0 o1) = ones && (logxor p0 p1) = ones then
         (lognot (add o1 p1), add o1 p1)
       else
-        (ones, ones)
+        (* (ones, ones) *) uint_fold_eval (o0, o1) (p0, p1)
     | If0 (e1, e2, e3) ->
       let (o0, o1) = eval (ones, ones) x y z e1 in
       if o1 = zero then
