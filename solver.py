@@ -68,7 +68,7 @@ def solve(problem, solver_command):
             def handler(signum, frame): 
                 if signum == signal.SIGALRM: raise Exception('Enumeration failed.')
             signal.signal(signal.SIGALRM, handler)
-            signal.alarm(240)
+            signal.alarm(300)
             worker_time = time.time()
             raw_query = worker.stdout.readline()
             worker_time = time.time() - worker_time
@@ -142,12 +142,14 @@ def solve_honban_id(ids, command):
             time.sleep(3)
 
 if __name__ == '__main__':
-    command = sys.argv[1] if len(sys.argv) >= 2 else './enumerate_ml/enumerate'
+    command = sys.argv[1] if len(sys.argv) >= 2 else './ml2/main'
 
     print 'solver: start.'
 
     def cond(prob): # problem(dict) -> bool. true iff prob is what you want to tackle.
-        return prob['size'] <= 12
+        ops = prob['operators']
+        return prob['size'] <= 13 and len(ops) <= 4 and (not ('tfold' in ops))
+
     solve_honban(cond, command)
 
 

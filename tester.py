@@ -17,10 +17,10 @@ if __name__ == '__main__':
     size = int(sys.argv[2]) if len(sys.argv) >= 3 else 8
     print 'solver: start.'
     
-    problem = eval("{u'challenge': u'(lambda (x_29783) (fold (or (shr4 x_29783) (or 1 x_29783)) 0 (lambda (x_29784 x_29785) (or (not x_29784) x_29785))))', u'operators': [u'fold', u'not', u'or', u'shr4'], u'id': u'54B6G032B4tZubH2ktEeLXl4', u'size': 14}")
-    solver.solve(problem, command)
+    #problem = eval("{u'challenge': u'(lambda (x_29783) (fold (or (shr4 x_29783) (or 1 x_29783)) 0 (lambda (x_29784 x_29785) (or (not x_29784) x_29785))))', u'operators': [u'fold', u'not', u'or', u'shr4'], u'id': u'54B6G032B4tZubH2ktEeLXl4', u'size': 14}")
+    #solver.solve(problem, command)
 
-    quit()
+    #quit()
 
     for i in xrange(200): # set number of test cases.
         while True:

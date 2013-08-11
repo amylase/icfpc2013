@@ -337,15 +337,20 @@ let rec split_at n lst =
     let lx, ly = split_at (n-1) xs in
     (x :: lx, ly)
 
-let rec main op1s op2s fold if0 candidates qas =
+let rec main ii op1s op2s fold if0 candidates qas =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (List.length candidates)));
   (*Set.iter (prerr_endline % expr_to_string) candidates;*)
   let will_expand, candidates = split_at 1000 candidates in
   prerr_endline ("size (hd will_expand) = " ^ string_of_int (Syntax.size (List.hd will_expand)));
   let candidates =
-    List.filter
-      (fun candidate -> Set.for_all (fun (q, a) -> can q a candidate) qas)
-      (List.rev_append (List.rev [? List : expr' | expr <- List.enum will_expand; expr' <- List.enum (expand_n 1 fold expr op1s op2s if0) ?]) candidates)
+    (List.rev_append 
+       (List.rev 
+          [? List : expr' | 
+             expr <- List.enum will_expand;
+             expr' <- List.enum (expand_n 1 fold expr op1s op2s if0);
+             Set.for_all (fun (q, a) -> can q a expr') qas
+          ?])
+       candidates)
   in
   prerr_endline ("candidates after expansion = " ^ (string_of_int (List.length candidates)));
   let cs = List.filter complete candidates in
@@ -355,16 +360,16 @@ let rec main op1s op2s fold if0 candidates qas =
     in
     match guess (program_to_string (Lambda e)) with
     | Win -> ()
-    | Unknown -> main op1s op2s fold if0 (List.remove candidates e) qas
+    | Unknown -> main ii op1s op2s fold if0 (List.remove candidates e) qas
     | Mismatch (input, expected, _) ->
-      main op1s op2s fold if0
+      main ii op1s op2s fold if0
         (List.filter (can input expected) candidates)
         (Set.add (input, expected) qas)
   else
 (*    let q = Uint64.of_int64 (Random.int64 Int64.max_int) in (* BUG: highest bit never be 1. *)
     let [a] = query [q] in
     let newqas = (Set.add (q, a) qas) in*)
-    main op1s op2s fold if0 candidates qas
+    main (ii+1) op1s op2s fold if0 candidates qas
 
 let rec string_to_type = function
   | hd :: tl ->
@@ -386,9 +391,9 @@ let () =
   let tfold = List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
   if tfold then
-    main op1s op2s false if0
+    main 0 op1s op2s false if0
       [? List : expr | size <- (5--(n-1)); (x, y, z) <- split3 (size-2);
        expr <- List.enum (expand_until 3 10000 false [Fold (Tree x, Tree y, Tree z)] op1s op2s if0) ?] Set.empty
   else
-    main op1s op2s fold if0
+    main 0 op1s op2s fold if0
       [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_until 3 10000 fold [(Tree size)] op1s op2s if0) ?] Set.empty
