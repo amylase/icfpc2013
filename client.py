@@ -31,8 +31,10 @@ def post_train(size = 0, operators = None):
         data = dict()
         if 3 <= size <= 30 or size == 42:
             data['size'] = size
-        if operators in ['', 'tfold', 'fold']:
+        if operators in ['tfold', 'fold']:
             data['operators'] = [operators]
+        if operators == '':
+            data['operators'] = []
         return json.load(urllib2.urlopen(url_train, json.dumps(data)))
     except urllib2.HTTPError as err:
         return {u'status': u'error', u'message': err.__str__()}
