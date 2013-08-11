@@ -56,7 +56,7 @@ let uint_to_c x =
 let shift_left_with_one n m =
   logor (shift_left n m) (sub (shift_left one m) one)
 
-let shift_right_with_one n m = 
+let shift_right_with_one n m =
   logor (shift_right n m) (shift_left (sub (shift_left one m) one) (64 - m))
 
 (*
@@ -65,8 +65,8 @@ let cplus' n (n0, n1) (m0, m1) c0 c1 =
   let o = (add (add (of_int c1) (logand one n1)) (logand one m1)) in
   match (z, o) with
     | 0 0 -> ()
-  
-  
+
+
 
 let cplus (n0, n1) (m0, m1) =
   cplus' 64 (n0, n1) (m0, m1) 1 0
@@ -191,14 +191,14 @@ let memo = Hashtbl.create 0
 let rec gen w size fold bound op1s op2s if0 =
   if Hashtbl.mem memo (w, size, fold, bound) then
     Hashtbl.find memo (w, size, fold, bound)
-  else 
+  else
     if w = 0 then
       [(Tree size)]
     else
       let ans =
         match size with
           | 0 -> invalid_arg "zero is not allowed."
-          | 1 -> 
+          | 1 ->
             (if bound then [Zero; One; Var "x"; Var "y"; Var "z"] else [Zero; One; Var "x"])
           | size ->
             List.filter (not % can_optimize_expr) begin
@@ -244,74 +244,82 @@ let random_shuffle lst =
     a.(j) <- tmp
   done;
   Array.to_list a
-      
-let rec expand fold bound op1s op2s if0 expr = 
-  List.filter (not % can_optimize_expr % fst) begin
+
+let rec expand fold bound op1s op2s if0 expr =
+  let (es, fin) =
     match expr with
-      | Zero -> [(Zero, fold)]
-      | One  -> [(One, fold)]
-      | Var id -> [(Var id, fold)]
-      | Op1 (op, e) -> 
-        let es = expand fold bound op1s op2s if0 e in
-        List.map (fun (e', fold') -> Op1 (op, e'), fold') es
+      | Zero -> [(Zero, fold)], false
+      | One  -> [(One, fold)], false
+      | Var id -> [(Var id, fold)], false
+      | Op1 (op, e) ->
+        let es, fin = expand fold bound op1s op2s if0 e in
+        (List.map (fun (e', fold') -> Op1 (op, e'), fold') es, fin)
       | Op2 (op, e1, e2) ->
-        let e1s = expand fold bound op1s op2s if0 e1 in
-        begin match e1s with
-        | [] -> []
-        | _ :: _ :: _ ->
-          List.map (fun (e1', fold1) -> Op2 (op, e1', e2), fold1) e1s
-        | (e1', fold1) :: [] ->
-          let e2s = expand fold1 bound op1s op2s if0 e2 in
-          List.map (fun (e2', fold2) -> Op2 (op, e1', e2'), fold2) e2s
-        end
+        let e1s, fin1 = expand fold bound op1s op2s if0 e1 in
+        if fin1 then
+          (List.map (fun (e1', fold1) -> Op2 (op, e1', e2), fold1) e1s, fin1)
+        else
+          begin match e1s with
+          | [e1',fold1] ->
+            let e2s, fin2 = expand fold1 bound op1s op2s if0 e2 in
+            (List.map (fun (e2', fold2) -> Op2 (op, e1', e2'), fold2) e2s, fin2)
+          | _ -> prerr_endline ("expand: " ^ (expr_to_string expr)); assert false
+          end
       | If0 (e1, e2, e3) ->
-        let e1s = expand fold bound op1s op2s if0 e1 in
-        begin match e1s with
-        | [] -> []
-        | _ :: _ :: _ ->
-          List.map (fun (e1', fold1) -> If0 (e1', e2, e3), fold1) e1s
-        | (e1', fold1) :: [] ->
-          let e2s = expand fold1 bound op1s op2s if0 e2 in
-          match e2s with
-          | [] -> []
-          | _ :: _ :: _ ->
-            List.map (fun (e2', fold2) -> If0 (e1', e2', e3), fold2) e2s
-          | (e2', fold2) :: [] ->
-            let e3s = expand fold2 bound op1s op2s if0 e3 in
-            List.map (fun (e3', fold3) -> If0 (e1', e2', e3'), fold3) e3s
-        end
+        let e1s, fin1 = expand fold bound op1s op2s if0 e1 in
+        if fin1 then
+          (List.map (fun (e1', fold1) -> If0 (e1', e2 , e3), fold1) e1s, fin1)
+        else
+          begin match e1s with
+          | [e1',fold1] ->
+            let e2s, fin2 = expand fold1 bound op1s op2s if0 e2 in
+            if fin2 then
+              (List.map (fun (e2', fold2) -> If0 (e1', e2', e3), fold2) e2s, fin2)
+            else
+              begin match e2s with
+              | [e2',fold2] ->
+                let e3s, fin3 = expand fold2 bound op1s op2s if0 e3 in
+                (List.map (fun (e3', fold3) -> If0 (e1', e2', e3'), fold3) e3s, fin3)
+              | _ -> assert false
+              end
+          | _ -> assert false
+          end
       | Fold (e1, e2, e3) ->
-        let e1s = expand false false op1s op2s if0 e1 in
-        begin match e1s with
-        | [] -> []
-        | _ :: _ :: _ ->
-          List.map (fun (e1', false) -> Fold (e1', e2, e3), false) e1s
-        | (e1', fold1) :: [] ->
-          let e2s = expand false false op1s op2s if0 e2 in
-          match e2s with
-          | [] -> []
-          | _ :: _ :: _ ->
-            List.map (fun (e2', false) -> Fold (e1', e2', e3), false) e2s
-          | (e2', fold2) :: [] ->
-            let e3s = expand false true op1s op2s if0 e3 in
-            List.map (fun (e3', false) -> Fold (e1', e2', e3'), false) e3s
-        end
+        let e1s, fin1 = expand false false op1s op2s if0 e1 in
+        if fin1 then
+          (List.map (fun (e1', false) -> Fold (e1', e2 , e3), false) e1s, fin1)
+        else
+          begin match e1s with
+          | [e1',false] ->
+            let e2s, fin2 = expand false false op1s op2s if0 e2 in
+            if fin2 then
+              (List.map (fun (e2', false) -> Fold (e1', e2', e3), false) e2s, fin2)
+            else
+              begin match e2s with
+              | [e2',false] ->
+                let e3s, fin3 = expand false true op1s op2s if0 e3 in
+                (List.map (fun (e3', false) -> Fold (e1', e2', e3'), false) e3s, fin3)
+              | _ -> assert false
+              end
+          | _ -> assert false
+          end
       | Tree size ->
-        List.map (fun expr -> (expr, false)) (gen 1 size fold bound op1s op2s if0) (* CAUTION: false is potentially dangerous. *)
-  end
+        (List.map (fun expr -> (expr, false)) (gen 1 size fold bound op1s op2s if0), true) (* CAUTION: false is potentially dangerous. *)
+  in
+  List.filter (not % can_optimize_expr % fst) es, fin
 
 let rec expand_n n fold expr op1s op2s if0 =
-  if n = 0 then 
+  if n = 0 then
     [expr]
   else
-    [? List : expr' | expr'' <- List.enum (expand_n (n-1) fold expr op1s op2s if0); (expr', _) <- List.enum (expand fold false op1s op2s if0 expr'') ?] 
+    [? List : expr' | expr'' <- List.enum (expand_n (n-1) fold expr op1s op2s if0); (expr', _) <- List.enum (fst (expand fold false op1s op2s if0 expr'')) ?]
 
 let printc (i0, i1) =
   prerr_endline ("(" ^ (to_string_bin i0) ^ ", " ^ to_string_bin i1 ^ ")")
 
 let can input expected expr =
-  let (o0, o1) = 
-    eval (uint_to_c expected) (uint_to_c input) c_dummy c_dummy expr 
+  let (o0, o1) =
+    eval (uint_to_c expected) (uint_to_c input) c_dummy c_dummy expr
   in
   lognot (logor o0 o1) = zero
 
@@ -319,7 +327,7 @@ let rec split_at n lst =
   match n, lst with
   | _, [] -> ([], [])
   | 0, lst -> ([], lst)
-  | n, x :: xs -> 
+  | n, x :: xs ->
     let lx, ly = split_at (n-1) xs in
     (x :: lx, ly)
 
@@ -329,12 +337,12 @@ let rec main op1s op2s fold if0 candidates qas =
   let will_expand, candidates = split_at 10000 candidates in
   prerr_endline ("size (hd will_expand) = " ^ string_of_int (Syntax.size (List.hd will_expand)));
   let candidates =
-    List.filter 
+    List.filter
       (fun candidate -> Set.for_all (fun (q, a) -> can q a candidate) qas)
       (List.rev_append (List.rev [? List : expr' | expr <- List.enum will_expand; expr' <- List.enum (expand_n 3 fold expr op1s op2s if0) ?]) candidates)
   in
   prerr_endline ("candidates after expansion = " ^ (string_of_int (List.length candidates)));
-  let cs = List.filter complete candidates in  
+  let cs = List.filter complete candidates in
   prerr_endline ("complete candidates = " ^ (string_of_int (List.length cs)));
   if (List.length candidates >= 10000 || List.length cs = List.length candidates) && (not (List.is_empty cs)) then
     let e :: next_candidates = cs
@@ -365,4 +373,4 @@ let () =
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
   main op1s op2s fold if0
-    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_n 12 fold (Tree size) op1s op2s if0) ?] Set.empty
+    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_n 5 fold (Tree size) op1s op2s if0) ?] Set.empty
