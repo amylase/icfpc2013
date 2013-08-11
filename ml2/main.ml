@@ -85,8 +85,7 @@ let rec uint_fold' f init vec n =
   if n = 0 then
     init
   else
-    uint_fold' f (f (logand vec (of_int 0xff)) init) (shift_right vec 8) (n-1)
-
+    uint_fold' f (f (Tuple2.map (logor (lognot (of_int 0xff))) (logand (of_int 0xff)) vec) init) (Tuple2.map (~~shift_right_with_one 8) (~~shift_right 8) vec) (n-1)
 let uint_fold f init vec =
   uint_fold' f init vec 8
 
@@ -98,6 +97,7 @@ let plus_eval (o0, o1) (p0, p1) (r0, r1) =
   ((if min <= one then one else zero), (if max >= two then one else zero)),
   ((if max != min or rem min two = zero then one else zero), (if max != min or rem min two = one then one else zero))
 
+(*
 let rec uint_fold_eval' i o p r n =
   if n = 0 then
     i
@@ -111,17 +111,17 @@ let rec uint_fold_eval' i o p r n =
 
 let uint_fold_eval o p =
   uint_fold_eval' (zero, zero) o p (zero, zero) 64
+*)
 
 let rec eval (i0, i1) x y z expr =
   let (r0, r1) = 
-  if complete expr then begin
     match expr with
     | Zero -> (ones, zero)
     | One -> (lognot one, one)
     | Var "x" -> x
     | Var "y" -> y
     | Var "z" -> z
-    | Var _ -> (zero, zero)
+    | Var _ -> invalid_arg "unkown variable."
     | Op1 (Not, e) ->
       let (o0, o1) = eval (i1, i0) x y z e in
       (o1, o0)
@@ -168,18 +168,11 @@ let rec eval (i0, i1) x y z expr =
         let (q0, q1) = eval (i0, i1) x y z e3 in
         (logor p0 q0, logor q0 q1)
     | Fold (e1, e2, e3) ->
-      let (o0, o1) = eval (ones, ones) x y z e1 in
-      let (p0, p1) = eval (ones, ones) x y z e2 in
-      if (logxor o0 o1) = ones && (logxor p0 p1) = ones then
-        let ans = uint_fold (fun y z -> (snd (eval (ones, ones) x (lognot y, y) (lognot z, z) e3))) p1 o1 in
-        (lognot ans, ans)
-      else
-        eval (ones, ones) x (fold_or i0, fold_or i1) (ones, ones) e3
+        let o = eval (ones, ones) x y z e1 in
+        let p = eval (ones, ones) x y z e2 in
+        uint_fold (fun y z -> eval (ones, ones) x y z e3) p o
     | Tree _ ->
       (ones, ones)
-  end
-  else
-    (ones, ones)
   in
   (logand i0 r0, logand i1 r1)
 
@@ -372,10 +365,16 @@ let rec string_to_type = function
       if List.mem hd ["and"; "or"; "xor"; "plus"] then op1s, (string_to_op2 hd) :: op2s else op1s, op2s
   | [] -> [], []
 
+let rec expand_until n m fold trees op1s op2s if0 =
+  if n = 0 || List.length trees >= m then
+    trees
+  else
+    expand_until (n-1) m fold [? List : tree' | tree <- List.enum trees; (tree', _) <- List.enum (fst (expand fold false op1s op2s if0 tree)) ?] op1s op2s if0
+
 let () =
   let Problem (n, ops) = get_problem () in
   let op1s, op2s = string_to_type ops in
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
   main op1s op2s fold if0
-    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_n 5 fold (Tree size) op1s op2s if0) ?] Set.empty
+    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_until 10 10000 fold [(Tree size)] op1s op2s if0) ?] Set.empty

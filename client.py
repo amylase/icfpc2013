@@ -7,11 +7,7 @@ user_id = '0352iTeh6NszUZhvuvJktMHZnQlc93aNwuW4KIJwvpsH1H'
 url_base = 'http://icfpc2013.cloudapp.net/'
 # url_base + {'myproblems, train, eval, guess'} + '?auth=' + user_id
 
-print "HELLO!!!"
-
 problems = json.load(open('train_mod.json'))
-
-print "HELLO!!!!!!!!"
 
 def get_problem_by_id(idstr):
     l = [p for p in problems if p['id'] == idstr]
