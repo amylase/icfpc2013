@@ -383,6 +383,12 @@ let () =
   let Problem (n, ops) = get_problem () in
   let op1s, op2s = string_to_type ops in
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
+  let tfold = List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
-  main op1s op2s fold if0
-    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_until 3 10000 fold [(Tree size)] op1s op2s if0) ?] Set.empty
+  if tfold then
+    main op1s op2s false if0
+      [? List : expr | size <- (5--(n-1)); (x, y, z) <- split3 (size-2);
+       expr <- List.enum (expand_until 3 10000 false [Fold (Tree x, Tree y, Tree z)] op1s op2s if0) ?] Set.empty
+  else
+    main op1s op2s fold if0
+      [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_until 3 10000 fold [(Tree size)] op1s op2s if0) ?] Set.empty
