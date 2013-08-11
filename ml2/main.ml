@@ -153,7 +153,7 @@ let rec eval (i0, i1) x y z expr =
       if (logxor o0 o1) = ones && (logxor p0 p1) = ones then
         (lognot (add o1 p1), add o1 p1)
       else
-        (* (ones, ones) *) uint_fold_eval (o0, o1) (p0, p1)
+        (ones, ones) (* uint_fold_eval (o0, o1) (p0, p1) *)
     | If0 (e1, e2, e3) ->
       let (o0, o1) = eval (ones, ones) x y z e1 in
       if o1 = zero then
@@ -236,7 +236,7 @@ let random_shuffle lst =
   in
   let n = Array.length a
   in
-  for i = 0 to n do
+  for i = 0 to (n-1) do
     let j = Random.int (n-i) in
     let tmp = a.(i) in
     a.(i) <- a.(j);
@@ -256,6 +256,7 @@ let rec expand fold bound op1s op2s if0 expr =
       | Op2 (op, e1, e2) ->
         let e1s = expand fold bound op1s op2s if0 e1 in
         begin match e1s with
+        | [] -> []
         | _ :: _ :: _ ->
           List.map (fun (e1', fold1) -> Op2 (op, e1', e2), fold1) e1s
         | (e1', fold1) :: [] ->
@@ -265,11 +266,13 @@ let rec expand fold bound op1s op2s if0 expr =
       | If0 (e1, e2, e3) ->
         let e1s = expand fold bound op1s op2s if0 e1 in
         begin match e1s with
+        | [] -> []
         | _ :: _ :: _ ->
           List.map (fun (e1', fold1) -> If0 (e1', e2, e3), fold1) e1s
         | (e1', fold1) :: [] ->
           let e2s = expand fold1 bound op1s op2s if0 e2 in
           match e2s with
+          | [] -> []
           | _ :: _ :: _ ->
             List.map (fun (e2', fold2) -> If0 (e1', e2', e3), fold2) e2s
           | (e2', fold2) :: [] ->
@@ -279,11 +282,13 @@ let rec expand fold bound op1s op2s if0 expr =
       | Fold (e1, e2, e3) ->
         let e1s = expand false false op1s op2s if0 e1 in
         begin match e1s with
+        | [] -> []
         | _ :: _ :: _ ->
           List.map (fun (e1', false) -> Fold (e1', e2, e3), false) e1s
         | (e1', fold1) :: [] ->
           let e2s = expand false false op1s op2s if0 e2 in
           match e2s with
+          | [] -> []
           | _ :: _ :: _ ->
             List.map (fun (e2', false) -> Fold (e1', e2', e3), false) e2s
           | (e2', fold2) :: [] ->
@@ -320,7 +325,7 @@ let rec split_at n lst =
 let rec main op1s op2s fold if0 candidates qas =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (List.length candidates)));
   (*Set.iter (prerr_endline % expr_to_string) candidates;*)
-  let will_expand, candidates = split_at 10000 (random_shuffle candidates) in
+  let will_expand, candidates = split_at 10000 candidates in
   prerr_endline ("size (hd will_expand) = " ^ string_of_int (Syntax.size (List.hd will_expand)));
   let candidates =
     List.filter 
