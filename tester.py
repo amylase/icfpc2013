@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     for i in xrange(20): # set number of test cases.
         while True:
-            train = client.post_train(size = 8)
+            train = client.post_train(size = 12)
             if train.has_key('status'):
                 print train
             else:
