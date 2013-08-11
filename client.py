@@ -29,7 +29,7 @@ def post_train(size = 0, operators = None):
     try:
         url_train = url_base + 'train?auth=' + user_id
         data = dict()
-        if 3 <= size <= 30:
+        if 3 <= size <= 30 or size == 42:
             data['size'] = size
         if operators in ['', 'tfold', 'fold']:
             data['operators'] = [operators]
