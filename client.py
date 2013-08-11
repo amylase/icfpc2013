@@ -7,6 +7,13 @@ user_id = '0352iTeh6NszUZhvuvJktMHZnQlc93aNwuW4KIJwvpsH1H'
 url_base = 'http://icfpc2013.cloudapp.net/'
 # url_base + {'myproblems, train, eval, guess'} + '?auth=' + user_id
 
+problems = json.load(open('train_mod.json'))
+
+def get_problem_by_id(idstr):
+    l = [p for p in problems if p['id'] == idstr]
+    if len(l) > 0: return l[0]
+    raise Exception('get_problem_by_id: No such id. idstr = %s' % idstr)
+
 def post_myproblems(update = True):
     if not os.path.exists('problems.json') or update == True:
         url_problem = url_base + 'myproblems?auth=' + user_id
