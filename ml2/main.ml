@@ -302,12 +302,12 @@ let rec split_at n lst =
 let rec main op1s op2s fold if0 candidates qas =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (List.length candidates)));
   (*Set.iter (prerr_endline % expr_to_string) candidates;*)
-  let will_expand, candidates = split_at 50000 candidates in
+  let will_expand, candidates = split_at 10000 candidates in
   prerr_endline ("size (hd will_expand) = " ^ string_of_int (Syntax.size (List.hd will_expand)));
   let candidates =
     List.filter 
       (fun candidate -> Set.for_all (fun (q, a) -> can q a candidate) qas)
-      (List.rev_append (List.rev [? List : expr' | expr <- List.enum will_expand; expr' <- Set.enum (expand_n 2 fold expr op1s op2s if0) ?]) candidates)
+      (List.rev_append (List.rev [? List : expr' | expr <- List.enum will_expand; expr' <- Set.enum (expand_n 3 fold expr op1s op2s if0) ?]) candidates)
   in
   prerr_endline ("candidates after expansion = " ^ (string_of_int (List.length candidates)));
   let cs = List.filter complete candidates in  
@@ -323,11 +323,10 @@ let rec main op1s op2s fold if0 candidates qas =
         (List.filter (can input expected) candidates)
         (Set.add (input, expected) qas)
   else
-    let q = Uint64.of_int64 (Random.int64 Int64.max_int) in (* BUG: highest bit never be 1. *)
+(*    let q = Uint64.of_int64 (Random.int64 Int64.max_int) in (* BUG: highest bit never be 1. *)
     let [a] = query [q] in
-    let newqas = (Set.add (q, a) qas) in
-    main op1s op2s fold if0
-      (List.filter (fun candidate -> Set.for_all (fun (q, a) -> can q a candidate) newqas) candidates) newqas
+    let newqas = (Set.add (q, a) qas) in*)
+    main op1s op2s fold if0 candidates qas
 
 let rec string_to_type = function
   | hd :: tl ->
