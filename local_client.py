@@ -41,10 +41,12 @@ def paren_match(program):
         elif ch == ')':
             ret[stack.pop()] = i + 1
     return ret
-        
+       
+train_var = re.compile('x_\d+') 
 top_lambda = re.compile('\(lambda \((x_\d+)\)')
 fold_lambda = re.compile('\(lambda \((x_\d+) (x_\d+)\)')
 def normalize_program(program):
+    if re.search(train_var, program) == None: return program
     ret = program
     if program.find('fold') >= 0:
         fold_match = re.search(fold_lambda, program)

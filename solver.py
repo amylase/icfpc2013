@@ -1,11 +1,18 @@
 #! /usr/bin/env python
-
-import client
+import sys
 import subprocess
 import time
 import signal
 
+is_local = '--local' in sys.argv
+if is_local:
+    import local_client as client
+else:
+    import client
+
 wait_time = 5
+def wait_server(wait_time = 5):
+    if not is_local: time.sleep(5)
 
 def problem_string(problem):
     ret = ''
@@ -70,7 +77,7 @@ def solve(problem, solver_command):
         if query['type'] == 'eval':
             while True:
                 print 'solver: query:', query
-                time.sleep(wait_time)
+                wait_server()
                 result = client.post_eval(problem, query['arguments'])
                 if result['status'] == 'error':
                     if result['message'].find('Too many requests') >= 0:
@@ -86,7 +93,7 @@ def solve(problem, solver_command):
         elif query['type'] == 'guess':
             while True:
                 print 'solver: query:', query
-                time.sleep(wait_time)
+                wait_server()
                 result = client.post_guess(problem, query['program'])
                 if result['status'] == 'error':
                     if result['message'].find('Too many requests') >= 0:
@@ -112,11 +119,13 @@ def solve(problem, solver_command):
     return
 
 def solve_honban(condition, command):
-    time.sleep(wait_time)
+    wait_server()
     problems = client.post_myproblems(update = True)
     for problem in problems:
         if condition(problem) and not problem.get('solved', False) and problem.get('timeLeft', 300.) > 0.:
             solve(problem, command)
+            print 'solver: You can kill solver now. (3 secs given)'
+            time.sleep(3)
 
 def solve_honban_id(ids, command):
     problems = client.post_myproblems(update = False)
@@ -127,8 +136,7 @@ def solve_honban_id(ids, command):
             time.sleep(3)
 
 if __name__ == '__main__':
-    import sys
-    command = sys.argv[1] if len(sys.argv) == 2 else './enumerate_ml/enumerate'
+    command = sys.argv[1] if len(sys.argv) >= 2 else './enumerate_ml/enumerate'
 
     print 'solver: start.'
 
