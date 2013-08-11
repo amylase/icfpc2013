@@ -68,7 +68,7 @@ def solve(problem, solver_command):
             def handler(signum, frame): 
                 if signum == signal.SIGALRM: raise Exception('Enumeration failed.')
             signal.signal(signal.SIGALRM, handler)
-            signal.alarm(60)
+            signal.alarm(240)
             worker_time = time.time()
             raw_query = worker.stdout.readline()
             worker_time = time.time() - worker_time
