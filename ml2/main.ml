@@ -13,7 +13,8 @@ let same_prefix e1 e2 =
   | Op2 (op1, e1', _), Op2(op2, e2', _) -> op1 = op2 && e1' = e2'
   | _, _ -> false
 
-let rec can_optimize_expr = function
+let rec can_optimize_expr expr =
+  match expr with
   | Zero -> false
   | One -> false
   | Var id -> false
@@ -364,4 +365,4 @@ let () =
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
   main op1s op2s fold if0
-    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_n 5 fold (Tree size) op1s op2s if0) ?] Set.empty
+    [? List : expr | size <- (1--(n-1)); expr <- List.enum (expand_n 12 fold (Tree size) op1s op2s if0) ?] Set.empty
