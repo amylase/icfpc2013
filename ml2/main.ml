@@ -50,6 +50,9 @@ let uint_to_c x =
 let shift_left_with_one n m =
   logor (shift_left n m) (sub (shift_left one m) one)
 
+let shift_right_with_one n m = 
+  logor (shift_right n m) (shift_left (sub (shift_left one m) one) (64 - m))
+
 let rec fold_or' init vec n =
   if n = 0 then
     init
@@ -62,7 +65,7 @@ let fold_or vec =
 let rec eval (i0, i1) x y z expr =
   let (r0, r1) = match expr with
     | Zero -> (ones, zero)
-    | One -> (zero, ones)
+    | One -> (lognot one, one)
     | Var "x" -> x
     | Var "y" -> y
     | Var "z" -> z
@@ -71,19 +74,17 @@ let rec eval (i0, i1) x y z expr =
       let (o0, o1) = eval (i1, i0) x y z e in
       (o1, o0)
     | Op1 (Shl1, e) ->
-      let shift n = 
-        logor (shift_right n 1) (shift_left one 63) in
-      let (o0, o1) = eval (shift i0, shift i1) x y z e in
-      (shift_left o0 1, shift_left o1 1)
+      let (o0, o1) = eval (shift_right_with_one i0 1, shift_right_with_one i1 1) x y z e in
+      (shift_left_with_one o0 1, shift_left o1 1)
     | Op1 (Shr1, e) ->
       let (o0, o1) = eval (shift_left_with_one i0 1, shift_left_with_one i1 1) x y z e in
-      (shift_right o0 1, shift_right o1 1)
+      (shift_right_with_one o0 1, shift_right o1 1)
     | Op1 (Shr4, e) ->
       let (o0, o1) = eval (shift_left_with_one i0 4, shift_left_with_one i1 4) x y z e in
-      (shift_right o0 4, shift_right o1 4)
+      (shift_right_with_one o0 4, shift_right o1 4)
     | Op1 (Shr16, e) ->
       let (o0, o1) = eval (shift_left_with_one i0 16, shift_left_with_one i1 16) x y z e in
-      (shift_right o0 16, shift_right o1 16)
+      (shift_right_with_one o0 16, shift_right o1 16)
     | Op2 (And, e1, e2) ->
       let (o0, o1) = eval (i0, ones) x y z e1 in
       let (p0, p1) = eval (i0, ones) x y z e2 in
@@ -118,7 +119,15 @@ let rec eval (i0, i1) x y z expr =
     | Tree _ ->
       (ones, ones)
   in
-  (logand i0 r0, logand i0 r1)
+  (logand i0 r0, logand i1 r1)
+
+(*$T eval
+  eval (ones, ones) (uint_to_c Uint64.one) c_dummy c_dummy Syntax.Zero = (uint_to_c Uint64.zero)
+  eval (ones, ones) (uint_to_c Uint64.one) c_dummy c_dummy Syntax.One = (uint_to_c Uint64.one)
+  eval (ones, ones) (uint_to_c (Uint64.of_int 12)) c_dummy c_dummy (Syntax.Var "x") = (uint_to_c (Uint64.of_int 12))
+  eval (ones, ones) c_dummy c_dummy (uint_to_c (Uint64.of_int 999)) (Syntax.Var "z") = (uint_to_c (Uint64.of_int 999))
+  eval (uint_to_c (Uint64.of_int 7)) (uint_to_c (Uint64.of_int 15)) c_dummy c_dummy (Syntax.Op2 (Syntax.And, Syntax.Var "x", Syntax.Tree (5, true, true))) = c_dummy
+*)
 
 let rec gen w (size, fold, bound) (op1s : Syntax.op1 list) op2s if0 =
   if w = 0 then
@@ -226,19 +235,27 @@ let rec expand_n n expr op1s op2s if0 =
   else
     [? Set : expr' | expr'' <- Set.enum (expand_n (n-1) expr op1s op2s if0); expr' <- Set.enum (expand op1s op2s if0 expr'') ?] 
 
+let printc (i0, i1) =
+  prerr_endline ("(" ^ (to_string_bin i0) ^ ", " ^ to_string_bin i1 ^ ")")
+
 let can input expected expr =
   let (o0, o1) = 
     eval (uint_to_c expected) (uint_to_c input) c_dummy c_dummy expr 
   in
+  (*prerr_endline (expr_to_string expr);
+  printc (o0, o1);*)
   lognot (logor o0 o1) = zero
 
 let rec main op1s op2s if0 candidates qas =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (Set.cardinal candidates)));
+  (*Set.iter (prerr_endline % expr_to_string) candidates;*)
 
   let candidates = 
-    [? Set : expr' | expr <- Set.enum candidates; expr' <- Set.enum (expand_n 3 expr op1s op2s if0) ?] 
+    [? Set : expr' | expr <- Set.enum candidates; expr' <- Set.enum (expand_n 1 expr op1s op2s if0) ?]
   in
+  prerr_endline ("candidates after expansion = " ^ (string_of_int (Set.cardinal candidates)));
   let cs = Set.filter complete candidates in  
+  prerr_endline ("complete candidates = " ^ (string_of_int (Set.cardinal cs)));
   if not (Set.is_empty cs) then
     let e, next_candidates = Set.pop cs
     in
@@ -269,5 +286,16 @@ let () =
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
   main op1s op2s if0
-    [? Set : expr | size <- (1--(n-1)); expr <- Set.enum (expand_n 5 (Tree (size, fold, false)) op1s op2s if0) ?] Set.empty
+    [? Set : expr | size <- (1--(n-1)); expr <- Set.enum (expand_n 2 (Tree (size, fold, false)) op1s op2s if0) ?] Set.empty
 
+
+(*
+let () = 
+  let printc (i0, i1) =
+    print_endline ("(" ^ (to_string_bin i0) ^ ", " ^ to_string_bin i1 ^ ")") in
+  printc (eval (ones, ones) (uint_to_c Uint64.one) c_dummy c_dummy Syntax.Zero);
+  printc (eval (ones, ones) (uint_to_c Uint64.one) c_dummy c_dummy Syntax.One);
+  printc (eval (ones, ones) (uint_to_c (Uint64.of_int 12)) c_dummy c_dummy (Syntax.Var "x"));
+  printc (eval (ones, ones) c_dummy c_dummy (uint_to_c (Uint64.of_int 999)) (Syntax.Var "z"));
+  printc (eval (uint_to_c (Uint64.of_int 7)) (uint_to_c (Uint64.of_int 3)) c_dummy c_dummy (Syntax.Op2 (Syntax.And, Syntax.Var "x", Syntax.Tree (5, true, true))))
+*)
