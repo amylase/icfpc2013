@@ -231,6 +231,19 @@ let rec gen w size fold bound op1s op2s if0 =
             end
       in
       Hashtbl.add memo (w, size, fold, bound) ans; ans
+
+let random_shuffle lst =
+  let a = Array.of_list lst
+  in
+  let n = Array.length a
+  in
+  for i = 0 to n do
+    let j = Random.int (n-i) in
+    let tmp = a.(i) in
+    a.(i) <- a.(j);
+    a.(j) <- tmp
+  done;
+  Array.to_list a
       
 let rec expand fold bound op1s op2s if0 expr = 
   Set.filter (not % can_optimize_expr % fst) begin
@@ -305,7 +318,7 @@ let rec split_at n lst =
 let rec main op1s op2s fold if0 candidates qas =
   prerr_endline ("enumerate.ml: size of candidates = " ^ (string_of_int (List.length candidates)));
   (*Set.iter (prerr_endline % expr_to_string) candidates;*)
-  let will_expand, candidates = split_at 10000 candidates in
+  let will_expand, candidates = split_at 10000 (random_shuffle candidates) in
   prerr_endline ("size (hd will_expand) = " ^ string_of_int (Syntax.size (List.hd will_expand)));
   let candidates =
     List.filter 
