@@ -113,7 +113,9 @@ let uint_fold_eval o p =
   uint_fold_eval' (zero, zero) o p (zero, zero) 64
 
 let rec eval (i0, i1) x y z expr =
-  let (r0, r1) = match expr with
+  let (r0, r1) = 
+  if complete expr then begin
+    match expr with
     | Zero -> (ones, zero)
     | One -> (lognot one, one)
     | Var "x" -> x
@@ -175,6 +177,9 @@ let rec eval (i0, i1) x y z expr =
         eval (ones, ones) x (fold_or i0, fold_or i1) (ones, ones) e3
     | Tree _ ->
       (ones, ones)
+  end
+  else
+    (ones, ones)
   in
   (logand i0 r0, logand i1 r1)
 
