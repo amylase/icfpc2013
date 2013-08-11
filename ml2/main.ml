@@ -232,49 +232,52 @@ let rec gen w size fold bound op1s op2s if0 =
       in
       Hashtbl.add memo (w, size, fold, bound) ans; ans
       
-let rec expand fold bound op1s op2s if0 = function
-  | Zero -> Set.singleton (Zero, fold)
-  | One  -> Set.singleton (One, fold)
-  | Var id -> Set.singleton (Var id, fold)
-  | Op1 (op, e) -> 
-    let es = expand fold bound op1s op2s if0 e in
-    Set.map (fun (e', fold') -> Op1 (op, e'), fold') es
-  | Op2 (op, e1, e2) ->
-    let e1s = expand fold bound op1s op2s if0 e1 in
-    if Set.cardinal e1s <> 1 then
-      Set.map (fun (e1', fold1) -> Op2 (op, e1', e2), fold1) e1s
-    else
-      let e1' = fst (Set.choose e1s) in
-      let e2s = expand fold bound op1s op2s if0 e2 in
-      Set.map (fun (e2', fold2) -> Op2 (op, e1', e2'), fold2) e2s
-  | If0 (e1, e2, e3) ->
-    let e1s = expand fold bound op1s op2s if0 e1 in
-    if Set.cardinal e1s <> 1 then
-      Set.map (fun (e1', fold1) -> If0 (e1', e2, e3), fold1) e1s
-    else 
-      let e1', fold1 = Set.choose e1s in
-      let e2s = expand fold1 bound op1s op2s if0 e2 in
-      if Set.cardinal e2s <> 1 then
-        Set.map (fun (e2', fold2) -> If0 (e1', e2', e3), fold2) e2s
-      else
-        let e2', fold2 = Set.choose e2s in
-        let e3s = expand fold2 bound op1s op2s if0 e3 in
-        Set.map (fun (e3', fold3) -> If0 (e1', e2', e3'), fold3) e3s
-  | Fold (e1, e2, e3) ->
-    let e1s = expand false false op1s op2s if0 e1 in
-    if Set.cardinal e1s <> 1 then
-      Set.map (fun (e1', false) -> Fold (e1', e2, e3), false) e1s
-    else 
-      let e1', fold1 = Set.choose e1s in
-      let e2s = expand false false op1s op2s if0 e2 in
-      if Set.cardinal e2s <> 1 then
-        Set.map (fun (e2', false) -> Fold (e1', e2', e3), false) e2s
-      else
-        let e2', fold2 = Set.choose e2s in
-        let e3s = expand false true op1s op2s if0 e3 in
-        Set.map (fun (e3', false) -> Fold (e1', e2', e3'), false) e3s
-  | Tree size ->
-    Set.map (fun expr -> (expr, false)) (gen 1 size fold bound op1s op2s if0) (* CAUTION: false is potentially dangerous. *)
+let rec expand fold bound op1s op2s if0 expr = 
+  Set.filter (not % can_optimize_expr % fst) begin
+    match expr with
+      | Zero -> Set.singleton (Zero, fold)
+      | One  -> Set.singleton (One, fold)
+      | Var id -> Set.singleton (Var id, fold)
+      | Op1 (op, e) -> 
+        let es = expand fold bound op1s op2s if0 e in
+        Set.map (fun (e', fold') -> Op1 (op, e'), fold') es
+      | Op2 (op, e1, e2) ->
+        let e1s = expand fold bound op1s op2s if0 e1 in
+        if Set.cardinal e1s <> 1 then
+          Set.map (fun (e1', fold1) -> Op2 (op, e1', e2), fold1) e1s
+        else
+          let e1' = fst (Set.choose e1s) in
+          let e2s = expand fold bound op1s op2s if0 e2 in
+          Set.map (fun (e2', fold2) -> Op2 (op, e1', e2'), fold2) e2s
+      | If0 (e1, e2, e3) ->
+        let e1s = expand fold bound op1s op2s if0 e1 in
+        if Set.cardinal e1s <> 1 then
+          Set.map (fun (e1', fold1) -> If0 (e1', e2, e3), fold1) e1s
+        else 
+          let e1', fold1 = Set.choose e1s in
+          let e2s = expand fold1 bound op1s op2s if0 e2 in
+          if Set.cardinal e2s <> 1 then
+            Set.map (fun (e2', fold2) -> If0 (e1', e2', e3), fold2) e2s
+          else
+            let e2', fold2 = Set.choose e2s in
+            let e3s = expand fold2 bound op1s op2s if0 e3 in
+            Set.map (fun (e3', fold3) -> If0 (e1', e2', e3'), fold3) e3s
+      | Fold (e1, e2, e3) ->
+        let e1s = expand false false op1s op2s if0 e1 in
+        if Set.cardinal e1s <> 1 then
+          Set.map (fun (e1', false) -> Fold (e1', e2, e3), false) e1s
+        else 
+          let e1', fold1 = Set.choose e1s in
+          let e2s = expand false false op1s op2s if0 e2 in
+          if Set.cardinal e2s <> 1 then
+            Set.map (fun (e2', false) -> Fold (e1', e2', e3), false) e2s
+          else
+            let e2', fold2 = Set.choose e2s in
+            let e3s = expand false true op1s op2s if0 e3 in
+            Set.map (fun (e3', false) -> Fold (e1', e2', e3'), false) e3s
+      | Tree size ->
+        Set.map (fun expr -> (expr, false)) (gen 1 size fold bound op1s op2s if0) (* CAUTION: false is potentially dangerous. *)
+  end
 
 let rec expand_n n fold expr op1s op2s if0 =
   if n = 0 then 
