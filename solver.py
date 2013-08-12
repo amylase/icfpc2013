@@ -13,7 +13,7 @@ else:
 def emph(string):
     return '\033[31m' + string + '\033[0m'
 
-default_wait = 5
+default_wait = 8
 def wait_server(wait_time = default_wait):
     if not is_local: time.sleep(max(wait_time, 0))
 
@@ -68,14 +68,14 @@ def solve(problem, solver_command):
             def handler(signum, frame): 
                 if signum == signal.SIGALRM: raise Exception('Enumeration failed.')
             signal.signal(signal.SIGALRM, handler)
-            signal.alarm(300)
+            signal.alarm(60)
             worker_time = time.time()
             raw_query = worker.stdout.readline()
             worker_time = time.time() - worker_time
             print 'solver: worker elapsed time:', worker_time, 'sec.'
             signal.alarm(0)
         except Exception:
-            print emph('solver: Enumeration takes more than 240 secs. Skipped.')
+            print emph('solver: Enumeration takes more than 60 secs. Skipped.')
             signal.alarm(0)
             break
         
@@ -104,7 +104,7 @@ def solve(problem, solver_command):
                 if result['status'] == 'error':
                     if result['message'].find('Too many requests') >= 0:
                         print emph('solver: Query refused because of too many requests. Retry.')
-                    if result['message'].find('Unable to decide equality') >= 0:
+                    elif result['message'].find('Unable to decide equality') >= 0:
                         print emph('solver: Server could not decide equality. Demand new guess.')
                         break
                     else:
@@ -130,16 +130,16 @@ def solve_honban(condition, command):
     for problem in problems:
         if condition(problem) and not problem.get('solved', False) and problem.get('timeLeft', 300.) > 0.:
             solve(problem, command)
-            print 'solver: You can kill solver now. (3 secs given)'
-            time.sleep(3)
+            # print 'solver: You can kill solver now. (3 secs given)'
+            # time.sleep(3)
 
 def solve_honban_id(ids, command):
     problems = client.post_myproblems(update = False)
     for problem in problems:
         if problem['id'] == ids and not problem.get('solved', False) and problem.get('timeLeft', 300.) > 0.:
             solve(command)
-            print 'solver: You can kill solver now. (3 secs given)'
-            time.sleep(3)
+            # print 'solver: You can kill solver now. (3 secs given)'
+            # time.sleep(3)
 
 if __name__ == '__main__':
     command = sys.argv[1] if len(sys.argv) >= 2 else './ml2/main'
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     def cond(prob): # problem(dict) -> bool. true iff prob is what you want to tackle.
         ops = prob['operators']
-        return prob['size'] <= 13 and len(ops) <= 4 and (not ('tfold' in ops))
+        return 24 <= prob['size'] <= 26
 
     solve_honban(cond, command)
 

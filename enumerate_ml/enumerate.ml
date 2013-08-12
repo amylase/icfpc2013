@@ -247,7 +247,7 @@ let () =
   let op1s, op2s = string_to_type ops in
   let fold = List.mem "fold" ops or List.mem "tfold" ops in
   let if0 = List.mem "if0" ops in
-  let candidates = [? Set : p | i <- (2--n); p <- Set.enum (enumerate i op1s op2s fold if0) ?]
+  let candidates = [? Set : p | i <- (2--(max 9 (11 - (max 0 ((List.length ops) - 7))))); p <- Set.enum (enumerate i op1s op2s fold if0) ?]
   in
   if Array.mem "-v" Sys.argv then
     Set.iter (print_endline % program_to_string) candidates;
